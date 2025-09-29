@@ -1,0 +1,56 @@
+package com.dinnervery.backend.entity;
+
+import com.dinnervery.backend.common.BaseEntity;
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "employees")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Employee extends BaseEntity {
+
+    @Column(name = "login_id", nullable = false, unique = true)
+    private String loginId;
+
+    @Column(name = "password", nullable = false)
+    private String password;
+
+    @Column(name = "name", nullable = false)
+    private String name;
+
+    @Column(name = "phone_number", nullable = false)
+    private String phoneNumber;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "task", nullable = false)
+    private EmployeeTask task;
+
+    @Builder
+    public Employee(String loginId, String password, String name, String phoneNumber, EmployeeTask task) {
+        this.loginId = loginId;
+        this.password = password;
+        this.name = name;
+        this.phoneNumber = phoneNumber;
+        this.task = task;
+    }
+
+    public void updateTask(EmployeeTask newTask) {
+        this.task = newTask;
+    }
+
+    public boolean hasCookPermission() {
+        return this.task == EmployeeTask.COOK;
+    }
+
+    public boolean hasDeliveryPermission() {
+        return this.task == EmployeeTask.DELIVERY;
+    }
+
+    public enum EmployeeTask {
+        COOK, DELIVERY
+    }
+}
