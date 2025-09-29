@@ -175,9 +175,20 @@ class CustomerGradeUpdateTest {
         for (int i = 1; i <= 10; i++) {
             Order order = Order.builder()
                     .customer(customer)
+                    .address(address)
                     .cardNumber("1234-5678-9012-3456")
                     .build();
             order = orderRepository.save(order);
+
+            // 주문 항목 추가
+            OrderItem orderItem = OrderItem.builder()
+                    .menu(menu)
+                    .servingStyle(servingStyle)
+                    .orderedQty(1)
+                    .build();
+            order.addOrderItem(orderItem);
+            order = orderRepository.save(order);
+
             orderService.completeOrder(order.getId());
         }
 

@@ -2,7 +2,9 @@ package com.dinnervery.backend.order;
 
 import com.dinnervery.backend.dto.order.OrderItemOptionRequest;
 import com.dinnervery.backend.dto.order.OrderItemRequest;
+import com.dinnervery.backend.entity.Address;
 import com.dinnervery.backend.entity.Customer;
+import com.dinnervery.backend.repository.AddressRepository;
 import com.dinnervery.backend.repository.CustomerRepository;
 import com.dinnervery.backend.repository.MenuOptionRepository;
 import com.dinnervery.backend.entity.Menu;
@@ -53,6 +55,9 @@ class OrderIntegrationTest {
 
     @Autowired
     private MenuOptionRepository menuOptionRepository;
+
+    @Autowired
+    private AddressRepository addressRepository;
 
     @Autowired
     private ServingStyleRepository servingStyleRepository;
@@ -127,15 +132,25 @@ class OrderIntegrationTest {
                 .options(List.of(optionRequest))
                 .build();
 
+        // 주소 생성
+        Address testAddress = Address.builder()
+                .customer(testCustomer)
+                .addrDetail("서울시 강남구 테헤란로 123")
+                .build();
+        testAddress = addressRepository.save(testAddress);
+
         // 주문 생성
         Order order = Order.builder()
                 .customer(testCustomer)
+                .address(testAddress)
+                .cardNumber("1234-5678-9012-3456")
                 .build();
         orderRepository.save(order);
 
         // 주문 항목 생성
         OrderItem orderItem = OrderItem.builder()
                 .menu(testMenu)
+                .servingStyle(testServingStyle)
                 .orderedQty(itemRequest.getOrderedQty())
                 .build();
         order.addOrderItem(orderItem);
@@ -182,9 +197,9 @@ class OrderIntegrationTest {
     @Test
     void 고객_주문횟수_10회_달성시_VIP_등급_변경() {
         // Given
-        // 고객의 주문 횟수를 9회로 설정
+        // 고객의 주문 횟수를 9회로 설정 (이미 setUp에서 5회로 설정되어 있으므로 4회만 추가)
         testCustomer = customerRepository.findById(testCustomer.getId()).orElseThrow();
-        for (int i = 0; i < 9; i++) {
+        for (int i = 0; i < 4; i++) {
             testCustomer.incrementOrderCount();
         }
         testCustomer = customerRepository.save(testCustomer);
@@ -196,16 +211,26 @@ class OrderIntegrationTest {
                 .options(List.of())
                 .build();
 
+        // 주소 생성
+        Address testAddress = Address.builder()
+                .customer(testCustomer)
+                .addrDetail("서울시 강남구 테헤란로 123")
+                .build();
+        testAddress = addressRepository.save(testAddress);
+
         // When
         // 주문 생성
         Order order = Order.builder()
                 .customer(testCustomer)
+                .address(testAddress)
+                .cardNumber("1234-5678-9012-3456")
                 .build();
         orderRepository.save(order);
 
         // 주문 항목 생성
         OrderItem orderItem = OrderItem.builder()
                 .menu(testMenu)
+                .servingStyle(testServingStyle)
                 .orderedQty(itemRequest.getOrderedQty())
                 .build();
         order.addOrderItem(orderItem);
@@ -225,14 +250,24 @@ class OrderIntegrationTest {
 
     @Test
     void 주문_조회_테스트() {
+        // 주소 생성
+        Address testAddress = Address.builder()
+                .customer(testCustomer)
+                .addrDetail("서울시 강남구 테헤란로 123")
+                .build();
+        testAddress = addressRepository.save(testAddress);
+
         // Given
         Order order = Order.builder()
                 .customer(testCustomer)
+                .address(testAddress)
+                .cardNumber("1234-5678-9012-3456")
                 .build();
         orderRepository.save(order);
 
         OrderItem orderItem = OrderItem.builder()
                 .menu(testMenu)
+                .servingStyle(testServingStyle)
                 .orderedQty(1)
                 .build();
         order.addOrderItem(orderItem);
