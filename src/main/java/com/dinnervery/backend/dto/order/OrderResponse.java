@@ -49,7 +49,6 @@ public class OrderResponse {
                 .orderDate(order.getOrderDate())
                 .requestedAt(order.getRequestedAt())
                 .cookingAt(order.getCookingAt())
-                .handoverAt(order.getHandoverAt())
                 .deliveringAt(order.getDeliveringAt())
                 .doneAt(order.getDoneAt())
                 .canceledAt(order.getCanceledAt())

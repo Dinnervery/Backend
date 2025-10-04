@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalTime;
 import java.util.List;
 
 @Data
@@ -24,6 +25,9 @@ public class OrderCreateRequest {
 
     @NotNull(message = "카드 번호는 필수입니다")
     private String cardNumber;
+
+    @NotNull(message = "배송 시간은 필수입니다")
+    private LocalTime deliveryTime;
 
     @Valid
     @NotEmpty(message = "주문 항목은 최소 1개 이상이어야 합니다")

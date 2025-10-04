@@ -1,0 +1,39 @@
+package com.dinnervery.backend.dto.request;
+
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class CartAddItemRequest {
+    
+    @NotNull(message = "메뉴 ID는 필수입니다")
+    private Long menuId;
+    
+    @NotNull(message = "수량은 필수입니다")
+    private Integer menuQuantity;
+    
+    @NotNull(message = "서빙 스타일 ID는 필수입니다")
+    private Long servingStyleId;
+    
+    private List<OptionRequest> options;
+    
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class OptionRequest {
+        @NotNull(message = "구성품 ID는 필수입니다")
+        private Long optionId;
+        
+        @NotNull(message = "수량은 필수입니다")
+        private Integer quantity;
+    }
+}

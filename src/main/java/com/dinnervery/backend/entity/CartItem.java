@@ -8,8 +8,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
-
 @Entity
 @Table(name = "cart_items")
 @Getter
@@ -31,11 +29,11 @@ public class CartItem extends BaseEntity {
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
-    @Column(name = "item_price", precision = 8, scale = 0)
-    private BigDecimal itemPrice;
+    @Column(name = "item_price")
+    private int itemPrice;
 
-    @Column(name = "item_total_price", precision = 8, scale = 0)
-    private BigDecimal itemTotalPrice;
+    @Column(name = "item_total_price")
+    private int itemTotalPrice;
 
     @Builder
     public CartItem(Menu menu, ServingStyle servingStyle, Integer quantity) {
@@ -49,6 +47,11 @@ public class CartItem extends BaseEntity {
         this.cart = cart;
     }
 
+    public void setServingStyle(ServingStyle servingStyle) {
+        this.servingStyle = servingStyle;
+        calculateItemPrice();
+    }
+
     public void updateQuantity(Integer newQuantity) {
         this.quantity = newQuantity;
         calculateItemPrice();
@@ -56,9 +59,9 @@ public class CartItem extends BaseEntity {
 
     private void calculateItemPrice() {
         // 기본 가격 + 서빙 스타일 추가비
-        BigDecimal basePrice = menu.getPrice().add(servingStyle.getExtraPrice());
+        int basePrice = menu.getPrice() + servingStyle.getExtraPrice();
         
         this.itemPrice = basePrice;
-        this.itemTotalPrice = basePrice.multiply(new BigDecimal(quantity));
+        this.itemTotalPrice = basePrice * quantity;
     }
 }

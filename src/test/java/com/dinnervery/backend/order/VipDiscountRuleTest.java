@@ -18,7 +18,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -50,15 +49,15 @@ class VipDiscountRuleTest {
     void setUp() {
         // 테스트 메뉴 설정
         testMenu = Menu.builder()
-                .name("테스트 메뉴")
-                .price(new BigDecimal("100000"))
-                .description("테스트용 메뉴")
+                .name("샴페인 축제 디너")
+                .price(90000)
+                .description("프리미엄 샴페인과 함께하는 축제 디너")
                 .build();
 
         // SIMPLE 서빙 스타일 설정
         simpleStyle = ServingStyle.builder()
                 .name("SIMPLE")
-                .extraPrice(BigDecimal.ZERO)
+                .extraPrice(0)
                 .build();
     }
 
@@ -99,8 +98,8 @@ class VipDiscountRuleTest {
 
         // Then
         // 주문 횟수 9회이므로 아직 VIP 할인 대상이 아님 (10회 이상이어야 함)
-        // 총 가격 100,000원 (할인 없음)
-        assertThat(totalPrice).isEqualTo(100000);
+        // 총 가격 90,000원 (할인 없음)
+        assertThat(totalPrice).isEqualTo(90000);
     }
 
     @Test
@@ -140,8 +139,8 @@ class VipDiscountRuleTest {
 
         // Then
         // 주문 횟수 10회이고 이번이 11번째 주문이므로 VIP 할인 적용
-        // 총 가격 100,000원 * 0.9 = 90,000원 (소수점 버림)
-        assertThat(totalPrice).isEqualTo(90000);
+        // 총 가격 90,000원 * 0.9 = 81,000원 (소수점 버림)
+        assertThat(totalPrice).isEqualTo(81000);
     }
 
     @Test
@@ -181,8 +180,8 @@ class VipDiscountRuleTest {
 
         // Then
         // 주문 횟수 21회이고 이번이 22번째 주문이므로 VIP 할인 적용
-        // 총 가격 100,000원 * 0.9 = 90,000원 (소수점 버림)
-        assertThat(totalPrice).isEqualTo(90000);
+        // 총 가격 90,000원 * 0.9 = 81,000원 (소수점 버림)
+        assertThat(totalPrice).isEqualTo(81000);
     }
 
     @Test
@@ -223,8 +222,8 @@ class VipDiscountRuleTest {
         // Then
         // 주문 횟수 11회이고 이번이 12번째 주문이므로 VIP 할인 미적용
         // VIP 할인은 11번째 주문마다 적용되므로 (11, 22, 33...)
-        // 총 가격 100,000원 (할인 없음)
-        assertThat(totalPrice).isEqualTo(100000);
+        // 총 가격 90,000원 (할인 없음)
+        assertThat(totalPrice).isEqualTo(90000);
     }
 }
 

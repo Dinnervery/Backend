@@ -1,5 +1,7 @@
 package com.dinnervery.backend.order;
 
+import com.dinnervery.backend.controller.MemberController;
+import com.dinnervery.backend.controller.MenuController;
 import com.dinnervery.backend.entity.Address;
 import com.dinnervery.backend.entity.Customer;
 import com.dinnervery.backend.entity.Order;
@@ -16,10 +18,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -27,6 +30,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("test")
 @Transactional
 class CustomerGradeUpdateTest {
+
+    @Autowired
+    private MemberController memberController;
+
+    @Autowired
+    private MenuController menuController;
 
     @Autowired
     private OrderService orderService;
@@ -65,22 +74,23 @@ class CustomerGradeUpdateTest {
         // 주소 생성
         address = Address.builder()
                 .customer(customer)
-                .addrDetail("서울시 강남구 테헤란로 123")
+                .address("서울시 강남구 테헤란로 123")
+                .detailAddress("456호")
                 .build();
         address = addressRepository.save(address);
 
         // 메뉴 생성
         menu = Menu.builder()
-                .name("테스트 메뉴")
-                .price(new BigDecimal("5000"))
-                .description("테스트용 메뉴")
+                .name("발렌타인 디너")
+                .price(28000)
+                .description("로맨틱한 발렌타인 특별 디너")
                 .build();
         menu = menuRepository.save(menu);
 
         // 서빙 스타일 생성
         servingStyle = ServingStyle.builder()
                 .name("일반")
-                .extraPrice(new BigDecimal("0"))
+                .extraPrice(0)
                 .build();
         servingStyle = servingStyleRepository.save(servingStyle);
     }
@@ -221,5 +231,81 @@ class CustomerGradeUpdateTest {
         Customer updatedCustomer = customerRepository.findById(customer.getId()).orElseThrow();
         assertThat(updatedCustomer.getOrderCount()).isEqualTo(11);
         assertThat(updatedCustomer.isVipDiscountEligible()).isFalse();
+    }
+
+    @Test
+    void 고객_정보_조회_API_테스트() {
+        // 고객 정보 조회 API 호출
+        ResponseEntity<Map<String, Object>> response = memberController.getCustomer(customer.getId());
+        
+        // 응답 검증
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        Map<String, Object> responseBody = response.getBody();
+        assertThat(responseBody).isNotNull();
+        
+        // 고객 정보 검증
+        assertThat(responseBody.get("customerId")).isEqualTo(customer.getId());
+        assertThat(responseBody.get("loginId")).isEqualTo(customer.getLoginId());
+        assertThat(responseBody.get("name")).isEqualTo(customer.getName());
+        assertThat(responseBody.get("phoneNumber")).isEqualTo(customer.getPhoneNumber());
+        assertThat(responseBody.get("address")).isEqualTo(customer.getAddress());
+        assertThat(responseBody.get("grade")).isEqualTo(customer.getGrade().toString());
+        assertThat(responseBody.get("orderCount")).isEqualTo(customer.getOrderCount());
+    }
+
+    @Test
+    void 메뉴_목록_조회_API_VIP_할인_테스트() {
+        // 고객을 VIP로 만들기 위해 주문수 10회로 설정
+        for (int i = 0; i < 10; i++) {
+            customer.incrementOrderCount();
+        }
+        customer = customerRepository.save(customer);
+        
+        // 메뉴 목록 조회 API 호출 (VIP 고객)
+        ResponseEntity<Map<String, Object>> response = menuController.getAllMenus(customer.getId());
+        
+        // 응답 검증
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        Map<String, Object> responseBody = response.getBody();
+        assertThat(responseBody).isNotNull();
+        
+        // 메뉴 목록 검증
+        @SuppressWarnings("unchecked")
+        java.util.List<Map<String, Object>> menus = (java.util.List<Map<String, Object>>) responseBody.get("menus");
+        assertThat(menus).isNotEmpty();
+        
+        // VIP 할인가 검증
+        Map<String, Object> menuData = menus.get(0);
+        assertThat(menuData.get("menuId")).isEqualTo(menu.getId());
+        assertThat(menuData.get("name")).isEqualTo(menu.getName());
+        assertThat(menuData.get("price")).isEqualTo(menu.getPrice());
+        assertThat(menuData.get("discountedPrice")).isNotNull();
+        
+        // 할인가 계산 검증 (10% 할인)
+        int expectedDiscountedPrice = (int) (menu.getPrice() * 0.9);
+        assertThat(menuData.get("discountedPrice")).isEqualTo(expectedDiscountedPrice);
+    }
+
+    @Test
+    void 메뉴_목록_조회_API_BASIC_고객_테스트() {
+        // 메뉴 목록 조회 API 호출 (BASIC 고객)
+        ResponseEntity<Map<String, Object>> response = menuController.getAllMenus(customer.getId());
+        
+        // 응답 검증
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        Map<String, Object> responseBody = response.getBody();
+        assertThat(responseBody).isNotNull();
+        
+        // 메뉴 목록 검증
+        @SuppressWarnings("unchecked")
+        java.util.List<Map<String, Object>> menus = (java.util.List<Map<String, Object>>) responseBody.get("menus");
+        assertThat(menus).isNotEmpty();
+        
+        // BASIC 고객은 할인가 없음
+        Map<String, Object> menuData = menus.get(0);
+        assertThat(menuData.get("menuId")).isEqualTo(menu.getId());
+        assertThat(menuData.get("name")).isEqualTo(menu.getName());
+        assertThat(menuData.get("price")).isEqualTo(menu.getPrice());
+        assertThat(menuData.get("discountedPrice")).isNull(); // BASIC 고객은 할인가 없음
     }
 }

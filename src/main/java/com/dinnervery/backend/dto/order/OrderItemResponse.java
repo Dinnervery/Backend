@@ -6,7 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,7 +19,7 @@ public class OrderItemResponse {
     private Long menuId;
     private String menuName;
     private int orderedQty;
-    private BigDecimal itemTotalPrice;
+    private int itemTotalPrice;
     private List<OrderItemOptionResponse> options;
 
     public static OrderItemResponse from(OrderItem orderItem) {

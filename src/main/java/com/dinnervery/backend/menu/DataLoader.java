@@ -11,8 +11,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
-
 @Component
 @RequiredArgsConstructor
 public class DataLoader implements CommandLineRunner {
@@ -39,19 +37,19 @@ public class DataLoader implements CommandLineRunner {
         if (servingStyleRepository.count() == 0) {
             ServingStyle simple = ServingStyle.builder()
                     .name("SIMPLE")
-                    .extraPrice(BigDecimal.ZERO)
+                    .extraPrice(0)
                     .build();
             servingStyleRepository.save(simple);
 
             ServingStyle grand = ServingStyle.builder()
                     .name("GRAND")
-                    .extraPrice(new BigDecimal("5000"))
+                    .extraPrice(5000)
                     .build();
             servingStyleRepository.save(grand);
 
             ServingStyle deluxe = ServingStyle.builder()
                     .name("DELUXE")
-                    .extraPrice(new BigDecimal("10000"))
+                    .extraPrice(10000)
                     .build();
             servingStyleRepository.save(deluxe);
         }
@@ -61,29 +59,29 @@ public class DataLoader implements CommandLineRunner {
         if (menuRepository.count() == 0) {
             Menu valentineDinner = Menu.builder()
                     .name("발렌타인 디너")
-                    .price(new BigDecimal("28000"))
-                    .description("로맨틱한 발렌타인 특별 디너")
+                    .price(28000)
+                    .description("스테이크, 와인, 큐피트 장식 접시, 냅킨")
                     .build();
             menuRepository.save(valentineDinner);
 
             Menu englishDinner = Menu.builder()
                     .name("잉글리시 디너")
-                    .price(new BigDecimal("35000"))
-                    .description("영국 전통 디너 코스")
+                    .price(35000)
+                    .description("에그 스크램블, 베이컨, 바게트빵, 스테이크")
                     .build();
             menuRepository.save(englishDinner);
 
             Menu frenchDinner = Menu.builder()
                     .name("프렌치 디너")
-                    .price(new BigDecimal("45000"))
-                    .description("프랑스 고급 디너 코스")
+                    .price(45000)
+                    .description("커피, 와인, 샐러드, 스테이크")
                     .build();
             menuRepository.save(frenchDinner);
 
             Menu champagneDinner = Menu.builder()
                     .name("샴페인 축제 디너")
-                    .price(new BigDecimal("90000"))
-                    .description("프리미엄 샴페인과 함께하는 축제 디너")
+                    .price(90000)
+                    .description("샴페인 2병, 바게트빵 4개, 커피포트, 와인, 스테이크")
                     .build();
             menuRepository.save(champagneDinner);
         }
@@ -91,7 +89,7 @@ public class DataLoader implements CommandLineRunner {
 
     private void createMenuOptions() {
         if (menuOptionRepository.count() == 0) {
-            // 발렌타인 디너 옵션
+            // 발렌타인 디너 옵션 (스테이크, 와인)
             Menu valentineDinner = menuRepository.findByName("발렌타인 디너").orElseThrow();
             
             MenuOption valentineSteak = MenuOption.builder()
@@ -106,141 +104,96 @@ public class DataLoader implements CommandLineRunner {
                     .menu(valentineDinner)
                     .itemName("와인")
                     .itemPrice(8000)
+                    .defaultQty(1)
                     .build();
             menuOptionRepository.save(valentineWine);
 
-            MenuOption valentineCoffee = MenuOption.builder()
-                    .menu(valentineDinner)
-                    .itemName("커피")
-                    .itemPrice(5000)
-                    .build();
-            menuOptionRepository.save(valentineCoffee);
-
-            MenuOption valentineSalad = MenuOption.builder()
-                    .menu(valentineDinner)
-                    .itemName("샐러드")
-                    .itemPrice(7000)
-                    .build();
-            menuOptionRepository.save(valentineSalad);
-
-            // 잉글리시 디너 옵션
+            // 잉글리시 디너 옵션 (에그 스크램블, 베이컨, 바게트빵, 스테이크)
             Menu englishDinner = menuRepository.findByName("잉글리시 디너").orElseThrow();
             
+            MenuOption englishEggScramble = MenuOption.builder()
+                    .menu(englishDinner)
+                    .itemName("에그 스크램블")
+                    .itemPrice(5000)
+                    .defaultQty(1)
+                    .build();
+            menuOptionRepository.save(englishEggScramble);
+
+            MenuOption englishBacon = MenuOption.builder()
+                    .menu(englishDinner)
+                    .itemName("베이컨")
+                    .itemPrice(4000)
+                    .defaultQty(1)
+                    .build();
+            menuOptionRepository.save(englishBacon);
+
+            MenuOption englishBaguette = MenuOption.builder()
+                    .menu(englishDinner)
+                    .itemName("바게트빵")
+                    .itemPrice(3000)
+                    .defaultQty(1)
+                    .build();
+            menuOptionRepository.save(englishBaguette);
+
             MenuOption englishSteak = MenuOption.builder()
                     .menu(englishDinner)
                     .itemName("스테이크")
                     .itemPrice(15000)
+                    .defaultQty(1)
                     .build();
             menuOptionRepository.save(englishSteak);
 
-            MenuOption englishWine = MenuOption.builder()
-                    .menu(englishDinner)
-                    .itemName("와인")
-                    .itemPrice(8000)
-                    .build();
-            menuOptionRepository.save(englishWine);
-
-            MenuOption englishCoffee = MenuOption.builder()
-                    .menu(englishDinner)
-                    .itemName("커피")
-                    .itemPrice(5000)
-                    .build();
-            menuOptionRepository.save(englishCoffee);
-
-            MenuOption englishSalad = MenuOption.builder()
-                    .menu(englishDinner)
-                    .itemName("샐러드")
-                    .itemPrice(7000)
-                    .build();
-            menuOptionRepository.save(englishSalad);
-
-            MenuOption englishBaguette = MenuOption.builder()
-                    .menu(englishDinner)
-                    .itemName("바게트")
-                    .itemPrice(3000)
-                    .build();
-            menuOptionRepository.save(englishBaguette);
-
-            // 프렌치 디너 옵션
+            // 프렌치 디너 옵션 (커피, 와인, 샐러드, 스테이크)
             Menu frenchDinner = menuRepository.findByName("프렌치 디너").orElseThrow();
             
-            MenuOption frenchSteak = MenuOption.builder()
+            MenuOption frenchCoffee = MenuOption.builder()
                     .menu(frenchDinner)
-                    .itemName("스테이크")
-                    .itemPrice(15000)
+                    .itemName("커피")
+                    .itemPrice(5000)
+                    .defaultQty(1)
                     .build();
-            menuOptionRepository.save(frenchSteak);
+            menuOptionRepository.save(frenchCoffee);
 
             MenuOption frenchWine = MenuOption.builder()
                     .menu(frenchDinner)
                     .itemName("와인")
                     .itemPrice(8000)
+                    .defaultQty(1)
                     .build();
             menuOptionRepository.save(frenchWine);
-
-            MenuOption frenchCoffee = MenuOption.builder()
-                    .menu(frenchDinner)
-                    .itemName("커피")
-                    .itemPrice(5000)
-                    .build();
-            menuOptionRepository.save(frenchCoffee);
 
             MenuOption frenchSalad = MenuOption.builder()
                     .menu(frenchDinner)
                     .itemName("샐러드")
                     .itemPrice(7000)
+                    .defaultQty(1)
                     .build();
             menuOptionRepository.save(frenchSalad);
 
-            MenuOption frenchBaguette = MenuOption.builder()
+            MenuOption frenchSteak = MenuOption.builder()
                     .menu(frenchDinner)
-                    .itemName("바게트")
-                    .itemPrice(3000)
-                    .build();
-            menuOptionRepository.save(frenchBaguette);
-
-            // 샴페인 축제 디너 옵션
-            Menu champagneDinner = menuRepository.findByName("샴페인 축제 디너").orElseThrow();
-            
-            MenuOption champagneSteak = MenuOption.builder()
-                    .menu(champagneDinner)
                     .itemName("스테이크")
                     .itemPrice(15000)
+                    .defaultQty(1)
                     .build();
-            menuOptionRepository.save(champagneSteak);
+            menuOptionRepository.save(frenchSteak);
 
-            MenuOption champagneWine = MenuOption.builder()
-                    .menu(champagneDinner)
-                    .itemName("와인")
-                    .itemPrice(8000)
-                    .build();
-            menuOptionRepository.save(champagneWine);
-
+            // 샴페인 축제 디너 옵션 (샴페인 2병, 바게트빵 4개, 커피포트, 와인, 스테이크)
+            Menu champagneDinner = menuRepository.findByName("샴페인 축제 디너").orElseThrow();
+            
             MenuOption champagneChampagne = MenuOption.builder()
                     .menu(champagneDinner)
                     .itemName("샴페인")
                     .itemPrice(25000)
+                    .defaultQty(2) // 기본 2병
                     .build();
             menuOptionRepository.save(champagneChampagne);
 
-            MenuOption champagneCoffee = MenuOption.builder()
-                    .menu(champagneDinner)
-                    .itemName("커피")
-                    .itemPrice(5000)
-                    .build();
-            menuOptionRepository.save(champagneCoffee);
-
-            MenuOption champagneSalad = MenuOption.builder()
-                    .menu(champagneDinner)
-                    .itemName("샐러드")
-                    .itemPrice(7000)
-                    .build();
-            menuOptionRepository.save(champagneSalad);
-
             MenuOption champagneBaguette = MenuOption.builder()
                     .menu(champagneDinner)
-                    .itemName("바게트")
+                    .itemName("바게트빵")
                     .itemPrice(3000)
+                    .defaultQty(4) // 기본 4개
                     .build();
             menuOptionRepository.save(champagneBaguette);
 
@@ -248,8 +201,25 @@ public class DataLoader implements CommandLineRunner {
                     .menu(champagneDinner)
                     .itemName("커피포트")
                     .itemPrice(10000)
+                    .defaultQty(1)
                     .build();
             menuOptionRepository.save(champagneCoffeePot);
+
+            MenuOption champagneWine = MenuOption.builder()
+                    .menu(champagneDinner)
+                    .itemName("와인")
+                    .itemPrice(8000)
+                    .defaultQty(1)
+                    .build();
+            menuOptionRepository.save(champagneWine);
+
+            MenuOption champagneSteak = MenuOption.builder()
+                    .menu(champagneDinner)
+                    .itemName("스테이크")
+                    .itemPrice(15000)
+                    .defaultQty(1)
+                    .build();
+            menuOptionRepository.save(champagneSteak);
         }
     }
 }

@@ -25,6 +25,12 @@ public class Customer extends BaseEntity {
     @Column(name = "phone_number", nullable = false)
     private String phoneNumber;
 
+    @Column(name = "address", nullable = false)
+    private String address;
+
+    @Column(name = "detail_address")
+    private String detailAddress;
+
     @Column(name = "order_count", nullable = false)
     private Integer orderCount = 0;
 
@@ -33,11 +39,13 @@ public class Customer extends BaseEntity {
     private CustomerGrade grade = CustomerGrade.BASIC;
 
     @Builder
-    public Customer(String loginId, String password, String name, String phoneNumber) {
+    public Customer(String loginId, String password, String name, String phoneNumber, String address, String detailAddress) {
         this.loginId = loginId;
         this.password = password;
         this.name = name;
         this.phoneNumber = phoneNumber;
+        this.address = address;
+        this.detailAddress = detailAddress;
     }
 
     public void incrementOrderCount() {

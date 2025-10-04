@@ -7,8 +7,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
-
 @Entity
 @Table(name = "menus")
 @Getter
@@ -21,13 +19,13 @@ public class Menu extends BaseEntity {
     @Column(name = "description")
     private String description;
 
-    @Column(name = "price", nullable = false, precision = 8, scale = 0)
-    private BigDecimal price;
+    @Column(name = "price", nullable = false)
+    private int price;
 
 
 
     @Builder
-    public Menu(String name, String description, BigDecimal price) {
+    public Menu(String name, String description, int price) {
         this.name = name;
         this.description = description;
         this.price = price;

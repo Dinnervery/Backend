@@ -38,10 +38,6 @@ public class Employee extends BaseEntity {
         this.task = task;
     }
 
-    public void updateTask(EmployeeTask newTask) {
-        this.task = newTask;
-    }
-
     public boolean hasCookPermission() {
         return this.task == EmployeeTask.COOK;
     }

@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalTime;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +40,9 @@ public class Order extends BaseEntity {
     @Column(name = "requested_at", nullable = false)
     private LocalDateTime requestedAt;
 
+    @Column(name = "delivery_time", nullable = false)
+    private LocalTime deliveryTime;
+
     @Column(name = "cooking_at")
     private LocalDateTime cookingAt;
 
@@ -48,9 +52,6 @@ public class Order extends BaseEntity {
     @Column(name = "done_at")
     private LocalDateTime doneAt;
 
-    @Column(name = "handover_at")
-    private LocalDateTime handoverAt;
-
     @Column(name = "canceled_at")
     private LocalDateTime canceledAt;
 
@@ -58,7 +59,7 @@ public class Order extends BaseEntity {
     private int totalAmount;
 
     @Column(name = "discount_amount")
-    private int discountAmount = 0;
+    private Integer discountAmount;
 
     @Column(name = "final_amount")
     private int finalAmount;
@@ -67,10 +68,11 @@ public class Order extends BaseEntity {
     private String cardNumber;
 
     @Builder
-    public Order(Customer customer, Address address, String cardNumber) {
+    public Order(Customer customer, Address address, String cardNumber, LocalTime deliveryTime) {
         this.customer = customer;
         this.address = address;
         this.cardNumber = cardNumber;
+        this.deliveryTime = deliveryTime;
         this.orderDate = LocalDateTime.now();
         this.requestedAt = LocalDateTime.now();
         this.totalAmount = 0;
@@ -91,7 +93,7 @@ public class Order extends BaseEntity {
 
     public void calculateTotalAmount() {
         this.totalAmount = this.orderItems.stream()
-                .mapToInt(orderItem -> orderItem.getItemTotalPrice().intValue())
+                .mapToInt(OrderItem::getItemTotalPrice)
                 .sum();
         this.finalAmount = this.totalAmount - this.discountAmount;
     }
@@ -110,19 +112,19 @@ public class Order extends BaseEntity {
         this.cookingAt = LocalDateTime.now();
     }
 
-    public void startDelivering() {
+    public void completeCooking() {
         if (this.deliveryStatus != status.COOKING) {
-            throw new IllegalStateException("배달 시작은 COOKING 상태에서만 가능합니다. 현재 상태: " + this.deliveryStatus);
+            throw new IllegalStateException("조리 완료는 COOKING 상태에서만 가능합니다. 현재 상태: " + this.deliveryStatus);
+        }
+        this.deliveryStatus = status.COOKED;
+    }
+
+    public void startDelivering() {
+        if (this.deliveryStatus != status.COOKED) {
+            throw new IllegalStateException("배달 시작은 COOKED 상태에서만 가능합니다. 현재 상태: " + this.deliveryStatus);
         }
         this.deliveryStatus = status.DELIVERING;
         this.deliveringAt = LocalDateTime.now();
-    }
-
-    public void handoverToDelivery() {
-        if (this.deliveryStatus != status.COOKING) {
-            throw new IllegalStateException("배달 인수는 COOKING 상태에서만 가능합니다. 현재 상태: " + this.deliveryStatus);
-        }
-        this.handoverAt = LocalDateTime.now();
     }
 
     public void completeDelivery() {
@@ -141,14 +143,19 @@ public class Order extends BaseEntity {
         this.canceledAt = LocalDateTime.now();
     }
 
-    // 현재 배달 완료 시각 반환 (done 상태일 때만)
-    public LocalDateTime getDeliveryTime() {
-        return this.doneAt;
+    // 배송 희망 시간 반환
+    public LocalTime getDeliveryTime() {
+        return this.deliveryTime;
+    }
+
+    public LocalDateTime getCanceledAt() {
+        return this.canceledAt;
     }
 
     public enum status {
         REQUESTED,  // 주문 요청
         COOKING,    // 조리 중
+        COOKED,     // 조리 완료
         DELIVERING, // 배달 중
         DONE,       // 배달 완료
         CANCELED    // 주문 취소

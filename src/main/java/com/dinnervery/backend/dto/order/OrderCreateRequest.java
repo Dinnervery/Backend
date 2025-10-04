@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalTime;
 import java.util.List;
 
 @Data
@@ -25,6 +26,9 @@ public class OrderCreateRequest {
 
     @Pattern(regexp = "^[0-9]{16}$", message = "올바른 카드번호 형식이 아닙니다 (16자리 숫자)")
     private String cardNumber;
+
+    @NotNull(message = "배송 희망 시간은 필수입니다")
+    private LocalTime deliveryTime;
 
     @Valid
     @NotEmpty(message = "주문 항목은 최소 1개 이상이어야 합니다")

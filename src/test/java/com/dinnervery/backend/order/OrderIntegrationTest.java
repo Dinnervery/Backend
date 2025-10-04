@@ -1,5 +1,7 @@
 package com.dinnervery.backend.order;
 
+import com.dinnervery.backend.controller.OrderController;
+import com.dinnervery.backend.dto.request.PriceCalculationRequest;
 import com.dinnervery.backend.dto.order.OrderItemOptionRequest;
 import com.dinnervery.backend.dto.order.OrderItemRequest;
 import com.dinnervery.backend.entity.Address;
@@ -23,11 +25,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,6 +39,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("test")
 @Transactional
 class OrderIntegrationTest {
+
+    @Autowired
+    private OrderController orderController;
 
     @Autowired
     private OrderRepository orderRepository;
@@ -87,34 +93,113 @@ class OrderIntegrationTest {
 
         // 테스트 메뉴 생성
         testMenu = Menu.builder()
-                .name("테스트 메뉴")
-                .price(new BigDecimal("50000"))
-                .description("통합 테스트용 메뉴")
+                .name("발렌타인 디너")
+                .price(28000)
+                .description("로맨틱한 발렌타인 특별 디너")
                 .build();
         testMenu = menuRepository.save(testMenu);
 
         // MenuOption을 위한 별도의 Menu 생성
         testMenuEntity = Menu.builder()
-                .name("테스트 메뉴 엔티티")
-                .price(new BigDecimal("50000"))
-                .description("통합 테스트용 메뉴 엔티티")
+                .name("잉글리시 디너")
+                .price(35000)
+                .description("영국 전통 디너 코스")
                 .build();
         testMenuEntity = menuRepository.save(testMenuEntity);
 
-        // 테스트 메뉴 옵션 생성
+        // 테스트 메뉴 옵션 생성 (잉글리시 디너의 스테이크)
         testMenuOption = MenuOption.builder()
                 .menu(testMenuEntity)
                 .itemName("스테이크")
-                .itemPrice(10000)
+                .itemPrice(15000)
+                .defaultQty(1)
                 .build();
         testMenuOption = menuOptionRepository.save(testMenuOption);
 
         // 테스트 서빙 스타일 생성
         testServingStyle = ServingStyle.builder()
                 .name("TEST_STYLE")
-                .extraPrice(new BigDecimal("5000"))
+                .extraPrice(5000)
                 .build();
         testServingStyle = servingStyleRepository.save(testServingStyle);
+    }
+
+    @Test
+    void 가격_계산_API_테스트() {
+        // 가격 계산 요청 생성
+        PriceCalculationRequest.OrderItemRequest orderItem = PriceCalculationRequest.OrderItemRequest.builder()
+                .menuId(testMenu.getId())
+                .quantity(2)
+                .servingStyleId(testServingStyle.getId())
+                .optionIds(List.of(testMenuOption.getId()))
+                .build();
+        
+        PriceCalculationRequest request = PriceCalculationRequest.builder()
+                .customerId(testCustomer.getId())
+                .items(List.of(orderItem))
+                .build();
+        
+        // 가격 계산 API 호출
+        ResponseEntity<Map<String, Object>> response = orderController.calculatePrice(request);
+        
+        // 응답 검증
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        Map<String, Object> responseBody = response.getBody();
+        assertThat(responseBody).isNotNull();
+        
+        // 가격 정보 검증
+        assertThat(responseBody.get("subtotal")).isNotNull();
+        assertThat(responseBody.get("finalPrice")).isNotNull();
+        assertThat(responseBody.get("customerGrade")).isEqualTo("BASIC");
+        assertThat(responseBody.get("discountRate")).isEqualTo(0);
+        
+        // 할인 전 가격 계산: 메뉴(28000) + 서빙스타일(5000) + 옵션(15000) = 48000 * 2 = 96000
+        int expectedSubtotal = (testMenu.getPrice() + testServingStyle.getExtraPrice() + testMenuOption.getItemPrice()) * 2;
+        assertThat(responseBody.get("subtotal")).isEqualTo(expectedSubtotal);
+        assertThat(responseBody.get("finalPrice")).isEqualTo(expectedSubtotal); // BASIC 등급이므로 할인 없음
+    }
+    
+    @Test
+    void VIP_고객_가격_계산_API_테스트() {
+        // 고객을 VIP로 만들기 위해 주문수 10회로 설정
+        for (int i = 0; i < 10; i++) {
+            testCustomer.incrementOrderCount();
+        }
+        testCustomer = customerRepository.save(testCustomer);
+        
+        // 가격 계산 요청 생성
+        PriceCalculationRequest.OrderItemRequest orderItem = PriceCalculationRequest.OrderItemRequest.builder()
+                .menuId(testMenu.getId())
+                .quantity(1)
+                .servingStyleId(testServingStyle.getId())
+                .optionIds(List.of())
+                .build();
+        
+        PriceCalculationRequest request = PriceCalculationRequest.builder()
+                .customerId(testCustomer.getId())
+                .items(List.of(orderItem))
+                .build();
+        
+        // 가격 계산 API 호출
+        ResponseEntity<Map<String, Object>> response = orderController.calculatePrice(request);
+        
+        // 응답 검증
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        Map<String, Object> responseBody = response.getBody();
+        assertThat(responseBody).isNotNull();
+        
+        // VIP 할인 검증
+        assertThat(responseBody.get("customerGrade")).isEqualTo("VIP");
+        assertThat(responseBody.get("discountRate")).isEqualTo(10);
+        
+        // 할인 전 가격: 메뉴(28000) + 서빙스타일(5000) = 33000
+        int expectedSubtotal = testMenu.getPrice() + testServingStyle.getExtraPrice();
+        int expectedDiscount = (int) (expectedSubtotal * 0.1);
+        int expectedFinalPrice = expectedSubtotal - expectedDiscount;
+        
+        assertThat(responseBody.get("subtotal")).isEqualTo(expectedSubtotal);
+        assertThat(responseBody.get("discountAmount")).isEqualTo(expectedDiscount);
+        assertThat(responseBody.get("finalPrice")).isEqualTo(expectedFinalPrice);
     }
 
     @Test
@@ -135,7 +220,8 @@ class OrderIntegrationTest {
         // 주소 생성
         Address testAddress = Address.builder()
                 .customer(testCustomer)
-                .addrDetail("서울시 강남구 테헤란로 123")
+                .address("서울시 강남구 테헤란로 123")
+                .detailAddress("456호")
                 .build();
         testAddress = addressRepository.save(testAddress);
 
@@ -214,7 +300,8 @@ class OrderIntegrationTest {
         // 주소 생성
         Address testAddress = Address.builder()
                 .customer(testCustomer)
-                .addrDetail("서울시 강남구 테헤란로 123")
+                .address("서울시 강남구 테헤란로 123")
+                .detailAddress("456호")
                 .build();
         testAddress = addressRepository.save(testAddress);
 
@@ -253,7 +340,8 @@ class OrderIntegrationTest {
         // 주소 생성
         Address testAddress = Address.builder()
                 .customer(testCustomer)
-                .addrDetail("서울시 강남구 테헤란로 123")
+                .address("서울시 강남구 테헤란로 123")
+                .detailAddress("456호")
                 .build();
         testAddress = addressRepository.save(testAddress);
 

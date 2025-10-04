@@ -1,7 +1,7 @@
 package com.dinnervery.backend.dto;
 
 import com.dinnervery.backend.entity.Menu;
-import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -9,8 +9,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.math.BigDecimal;
 
 @Data
 @Builder
@@ -28,8 +26,8 @@ public class MenuDto {
     private String description;
 
     @NotNull(message = "가격은 필수입니다")
-    @DecimalMin(value = "0.0", inclusive = false, message = "가격은 0보다 커야 합니다")
-    private BigDecimal price;
+    @Min(value = 1, message = "가격은 1원 이상이어야 합니다")
+    private int price;
 
 
 

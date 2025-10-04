@@ -1,5 +1,6 @@
 package com.dinnervery.backend.dto.member;
 
+import com.dinnervery.backend.entity.Employee;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -12,7 +13,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SignupRequest {
+public class EmployeeSignupRequest {
 
     @NotBlank(message = "로그인 ID는 필수입니다")
     @Size(min = 3, max = 20, message = "로그인 ID는 3-20자 사이여야 합니다")
@@ -28,8 +29,6 @@ public class SignupRequest {
     @Pattern(regexp = "^[0-9]{10,11}$", message = "올바른 전화번호 형식이 아닙니다 (10-11자리 숫자)")
     private String phoneNumber;
 
-    @NotBlank(message = "주소는 필수입니다")
-    private String address;
-
-    private String detailAddress;
+    @NotBlank(message = "업무는 필수입니다")
+    private Employee.EmployeeTask task;
 }

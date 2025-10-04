@@ -7,8 +7,10 @@ import com.dinnervery.backend.dto.request.ReorderRequest;
 import com.dinnervery.backend.entity.*;
 import com.dinnervery.backend.repository.AddressRepository;
 import com.dinnervery.backend.repository.CustomerRepository;
+import com.dinnervery.backend.repository.EmployeeRepository;
 import com.dinnervery.backend.repository.MenuRepository;
 import com.dinnervery.backend.repository.OrderRepository;
+import com.dinnervery.backend.repository.TaskRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,9 +28,17 @@ public class OrderService {
     private final CustomerRepository customerRepository;
     private final MenuRepository menuRepository;
     private final AddressRepository addressRepository;
+    private final EmployeeRepository employeeRepository;
+    private final TaskRepository taskRepository;
+    private final BusinessHoursService businessHoursService;
 
     @Transactional
     public OrderDto createOrder(OrderCreateRequest request) {
+        // 영업시간 검증
+        if (!businessHoursService.isBusinessHours()) {
+            throw new IllegalStateException("현재 영업시간이 아닙니다. 영업시간: 오후 5시 ~ 오후 11시");
+        }
+
         // 고객 조회
         Customer customer = customerRepository.findById(request.getCustomerId())
                 .orElseThrow(() -> new IllegalArgumentException("고객을 찾을 수 없습니다: " + request.getCustomerId()));
@@ -42,6 +52,7 @@ public class OrderService {
                 .customer(customer)
                 .address(address)
                 .cardNumber(request.getCardNumber())
+                .deliveryTime(request.getDeliveryTime())
                 .build();
 
         // 주문 항목들 추가
@@ -58,6 +69,10 @@ public class OrderService {
         }
 
         Order savedOrder = orderRepository.save(order);
+        
+        // 담당 직원 자동 배정 및 Task 생성
+        assignEmployeesAndCreateTasks(savedOrder);
+        
         return OrderDto.from(savedOrder);
     }
 
@@ -70,12 +85,6 @@ public class OrderService {
     public List<OrderDto> getOrdersByCustomerId(Long customerId) {
         List<Order> orders = orderRepository.findByCustomerIdWithDetails(customerId);
         return orders.stream()
-                .map(OrderDto::from)
-                .collect(Collectors.toList());
-    }
-
-    public List<OrderDto> getAllOrders() {
-        return orderRepository.findAll().stream()
                 .map(OrderDto::from)
                 .collect(Collectors.toList());
     }
@@ -116,6 +125,11 @@ public class OrderService {
 
     @Transactional
     public OrderDto reorder(Long originalOrderId, ReorderRequest request) {
+        // 영업시간 검증
+        if (!businessHoursService.isBusinessHours()) {
+            throw new IllegalStateException("현재 영업시간이 아닙니다. 영업시간: 오후 5시 ~ 오후 11시");
+        }
+
         // 원본 주문 조회
         Order originalOrder = orderRepository.findByIdWithDetails(originalOrderId)
                 .orElseThrow(() -> new IllegalArgumentException("원본 주문을 찾을 수 없습니다: " + originalOrderId));
@@ -147,7 +161,41 @@ public class OrderService {
         }
 
         Order savedOrder = orderRepository.save(newOrder);
+        
+        // 담당 직원 자동 배정 및 Task 생성
+        assignEmployeesAndCreateTasks(savedOrder);
+        
         return OrderDto.from(savedOrder);
+    }
+    
+    private void assignEmployeesAndCreateTasks(Order order) {
+        // 요리사 배정 (COOKING 작업)
+        Employee cook = employeeRepository.findByTask(Employee.EmployeeTask.COOK)
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("요리사를 찾을 수 없습니다"));
+        
+        Task cookingTask = Task.builder()
+                .title("주문 #" + order.getId() + " 조리")
+                .description("주문 상태: COOKING")
+                .assignedEmployee(cook)
+                .order(order)
+                .build();
+        taskRepository.save(cookingTask);
+        
+        // 배달원 배정 (DELIVERY 작업)
+        Employee deliveryPerson = employeeRepository.findByTask(Employee.EmployeeTask.DELIVERY)
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("배달원을 찾을 수 없습니다"));
+        
+        Task deliveryTask = Task.builder()
+                .title("주문 #" + order.getId() + " 배달")
+                .description("주문 상태: DELIVERING")
+                .assignedEmployee(deliveryPerson)
+                .order(order)
+                .build();
+        taskRepository.save(deliveryTask);
     }
 }
 

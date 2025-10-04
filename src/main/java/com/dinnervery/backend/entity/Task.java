@@ -29,11 +29,16 @@ public class Task extends BaseEntity {
     @JoinColumn(name = "assigned_employee_id")
     private Employee assignedEmployee;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id")
+    private Order order;
+
     @Builder
-    public Task(String title, String description, Employee assignedEmployee) {
+    public Task(String title, String description, Employee assignedEmployee, Order order) {
         this.title = title;
         this.description = description;
         this.assignedEmployee = assignedEmployee;
+        this.order = order;
     }
 
     public void updateStatus(TaskStatus newStatus) {
@@ -49,5 +54,3 @@ public class Task extends BaseEntity {
     }
 
 }
-
-

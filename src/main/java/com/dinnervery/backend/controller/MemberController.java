@@ -1,10 +1,14 @@
 package com.dinnervery.backend.controller;
 
 import com.dinnervery.backend.repository.CustomerRepository;
+import com.dinnervery.backend.repository.EmployeeRepository;
 import com.dinnervery.backend.dto.member.SignupRequest;
+import com.dinnervery.backend.dto.member.EmployeeSignupRequest;
+import com.dinnervery.backend.dto.member.LoginRequest;
 import com.dinnervery.backend.entity.Customer;
+import com.dinnervery.backend.entity.Employee;
+import com.dinnervery.backend.service.BusinessHoursService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,9 +21,26 @@ import java.util.Map;
 public class MemberController {
 
     private final CustomerRepository customerRepository;
+    private final EmployeeRepository employeeRepository;
+    private final BusinessHoursService businessHoursService;
 
-    @PostMapping("/auth/signup")
-    public ResponseEntity<Map<String, Object>> signup(@RequestBody SignupRequest request) {
+    // 영업시간 조회
+    @GetMapping("/business-hours/status")
+    public ResponseEntity<Map<String, Object>> getBusinessHoursStatus() {
+        BusinessHoursService.BusinessHoursStatus status = businessHoursService.getBusinessHoursStatus();
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("isOpen", status.isOpen());
+        response.put("openTime", status.getOpenTime().toString());
+        response.put("closeTime", status.getCloseTime().toString());
+        response.put("lastOrderTime", status.getLastOrderTime().toString());
+        response.put("message", status.getMessage());
+        
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/auth/customer/signup")
+    public ResponseEntity<Map<String, Object>> customerSignup(@RequestBody SignupRequest request) {
         // 중복 검증
         if (customerRepository.existsByLoginId(request.getLoginId())) {
             throw new IllegalArgumentException("이미 존재하는 로그인 ID입니다: " + request.getLoginId());
@@ -31,15 +52,88 @@ public class MemberController {
                 .password(request.getPassword())
                 .name(request.getName())
                 .phoneNumber(request.getPhoneNumber())
+                .address(request.getAddress())
+                .detailAddress(request.getDetailAddress())
                 .build();
 
         Customer savedCustomer = customerRepository.save(customer);
 
         Map<String, Object> response = new HashMap<>();
         response.put("customerId", savedCustomer.getId());
-        response.put("message", "회원가입이 완료되었습니다");
+        response.put("loginId", savedCustomer.getLoginId());
+        response.put("name", savedCustomer.getName());
+        response.put("phoneNumber", savedCustomer.getPhoneNumber());
+        response.put("address", savedCustomer.getAddress());
+        response.put("detailAddress", savedCustomer.getDetailAddress());
+        response.put("grade", savedCustomer.getGrade());
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/auth/employee/signup")
+    public ResponseEntity<Map<String, Object>> employeeSignup(@RequestBody EmployeeSignupRequest request) {
+        // 중복 검증
+        if (employeeRepository.existsByLoginId(request.getLoginId())) {
+            throw new IllegalArgumentException("이미 존재하는 로그인 ID입니다: " + request.getLoginId());
+        }
+
+        // 직원 생성
+        Employee employee = Employee.builder()
+                .loginId(request.getLoginId())
+                .password(request.getPassword())
+                .name(request.getName())
+                .phoneNumber(request.getPhoneNumber())
+                .task(request.getTask())
+                .build();
+
+        Employee savedEmployee = employeeRepository.save(employee);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("employeeId", savedEmployee.getId());
+        response.put("loginId", savedEmployee.getLoginId());
+        response.put("name", savedEmployee.getName());
+        response.put("phoneNumber", savedEmployee.getPhoneNumber());
+        response.put("task", savedEmployee.getTask());
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/auth/customer/login")
+    public ResponseEntity<Map<String, Object>> customerLogin(@RequestBody LoginRequest request) {
+        Customer customer = customerRepository.findByLoginId(request.getLoginId())
+                .orElseThrow(() -> new IllegalArgumentException("로그인에 실패했습니다"));
+
+        if (!customer.getPassword().equals(request.getPassword())) {
+            throw new IllegalArgumentException("로그인에 실패했습니다");
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("customerId", customer.getId());
+        response.put("loginId", customer.getLoginId());
+        response.put("name", customer.getName());
+        response.put("grade", customer.getGrade());
+        response.put("token", "eyJhbGciOiJIUzI1NiIs..."); // 실제로는 JWT 토큰 생성
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/auth/employee/login")
+    public ResponseEntity<Map<String, Object>> employeeLogin(@RequestBody LoginRequest request) {
+        Employee employee = employeeRepository.findByLoginId(request.getLoginId())
+                .orElseThrow(() -> new IllegalArgumentException("로그인에 실패했습니다"));
+
+        if (!employee.getPassword().equals(request.getPassword())) {
+            throw new IllegalArgumentException("로그인에 실패했습니다");
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("employeeId", employee.getId());
+        response.put("loginId", employee.getLoginId());
+        response.put("name", employee.getName());
+        response.put("task", employee.getTask());
+        response.put("token", "eyJhbGciOiJIUzI1NiIs..."); // 실제로는 JWT 토큰 생성
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/members/{id}")
@@ -53,8 +147,9 @@ public class MemberController {
         response.put("loginId", customer.getLoginId());
         response.put("name", customer.getName());
         response.put("phoneNumber", customer.getPhoneNumber());
-        response.put("orderCount", customer.getOrderCount());
+        response.put("address", customer.getAddress());
         response.put("grade", customer.getGrade());
+        response.put("orderCount", customer.getOrderCount());
 
         return ResponseEntity.ok(response);
     }

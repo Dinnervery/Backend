@@ -7,8 +7,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
-
 @Entity
 @Table(name = "serving_styles")
 @Getter
@@ -18,20 +16,20 @@ public class ServingStyle extends BaseEntity {
     @Column(name = "name", nullable = false, unique = true)
     private String name;
 
-    @Column(name = "extra_price", nullable = false, precision = 5, scale = 0)
-    private BigDecimal extraPrice;
+    @Column(name = "extra_price", nullable = false)
+    private int extraPrice;
 
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
 
     @Builder
-    public ServingStyle(String name, BigDecimal extraPrice, boolean isActive) {
+    public ServingStyle(String name, int extraPrice, boolean isActive) {
         this.name = name;
         this.extraPrice = extraPrice;
         this.isActive = isActive;
     }
 
-    public void updateExtraPrice(BigDecimal newExtraPrice) {
+    public void updateExtraPrice(int newExtraPrice) {
         this.extraPrice = newExtraPrice;
     }
 

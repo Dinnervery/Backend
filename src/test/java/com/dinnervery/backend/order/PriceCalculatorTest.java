@@ -20,7 +20,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -57,31 +56,32 @@ class PriceCalculatorTest {
         // 샴페인 축제 디너 메뉴 설정
         champagneMenu = Menu.builder()
                 .name("샴페인 축제 디너")
-                .price(new BigDecimal("90000"))
+                .price(90000)
                 .description("프리미엄 샴페인과 함께하는 축제 디너")
                 .build();
 
-        // 샴페인 옵션 설정 (기본 1개)
+        // 샴페인 옵션 설정 (기본 2병)
         champagneOption = MenuOption.builder()
                 .menu(champagneMenu)
                 .itemName("샴페인")
                 .itemPrice(25000)
+                .defaultQty(2) // 기본 2병
                 .build();
 
         // 서빙 스타일 설정
         simpleStyle = ServingStyle.builder()
                 .name("SIMPLE")
-                .extraPrice(BigDecimal.ZERO)
+                .extraPrice(0)
                 .build();
 
         grandStyle = ServingStyle.builder()
                 .name("GRAND")
-                .extraPrice(new BigDecimal("5000"))
+                .extraPrice(5000)
                 .build();
 
         deluxeStyle = ServingStyle.builder()
                 .name("DELUXE")
-                .extraPrice(new BigDecimal("10000"))
+                .extraPrice(10000)
                 .build();
 
         // 고객 설정
@@ -151,11 +151,11 @@ class PriceCalculatorTest {
     }
 
     @Test
-    void 샴페인_디너_샴페인_2병_주문시_옵션_델타_계산() {
+    void 샴페인_디너_샴페인_3병_주문시_옵션_델타_계산() {
         // Given
         OrderItemOptionRequest optionRequest = OrderItemOptionRequest.builder()
                 .menuOptionId(1L)
-                .orderedQty(2) // 기본 1개에서 2개로 설정 (1개 추가)
+                .orderedQty(3) // 기본 2병에서 3병으로 설정 (1병 추가)
                 .build();
 
         OrderItemRequest itemRequest = OrderItemRequest.builder()
@@ -180,7 +180,7 @@ class PriceCalculatorTest {
         int totalPrice = priceCalculator.calcOrderTotal(request);
 
         // Then
-        // 기본 가격 90,000 + 샴페인 추가 1개(25,000) = 115,000원
+        // 기본 가격 90,000 + 샴페인 추가 1병(25,000) = 115,000원
         assertThat(totalPrice).isEqualTo(115000);
     }
 }

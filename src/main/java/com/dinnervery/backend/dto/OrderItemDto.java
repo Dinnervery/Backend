@@ -8,8 +8,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
-
 @Data
 @Builder
 @NoArgsConstructor
@@ -24,8 +22,8 @@ public class OrderItemDto {
     @Min(value = 1, message = "주문 수량은 1 이상이어야 합니다")
     private Integer orderedQty;
     
-    private BigDecimal itemPrice;
-    private BigDecimal itemTotalPrice;
+    private int itemPrice;
+    private int itemTotalPrice;
 
     public static OrderItemDto from(OrderItem orderItem) {
         return OrderItemDto.builder()

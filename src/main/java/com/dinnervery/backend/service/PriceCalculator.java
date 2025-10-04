@@ -15,9 +15,6 @@ import com.dinnervery.backend.repository.ServingStyleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-
 @Component
 @RequiredArgsConstructor
 public class PriceCalculator {
@@ -28,7 +25,7 @@ public class PriceCalculator {
     private final CustomerRepository customerRepository;
 
     public int calcOrderTotal(OrderCreateRequest req) {
-        BigDecimal total = BigDecimal.ZERO;
+        int total = 0;
 
         for (OrderItemRequest itemRequest : req.getItems()) {
             // 메뉴 조회
@@ -40,18 +37,18 @@ public class PriceCalculator {
                     .orElseThrow(() -> new IllegalArgumentException("서빙 스타일을 찾을 수 없습니다: " + itemRequest.getServingStyleId()));
 
             // 기본 가격 계산
-            BigDecimal base = menu.getPrice();
+            int base = menu.getPrice();
             
             // 샴페인 축제 디너 특별 케이스
             if ("샴페인 축제 디너".equals(menu.getName())) {
-                base = new BigDecimal("90000");
+                base = 90000;
             }
 
             // 서빙 스타일 추가비
-            BigDecimal styleExtra = servingStyle.getExtraPrice();
+            int styleExtra = servingStyle.getExtraPrice();
 
             // 옵션 델타 계산
-            BigDecimal optionDelta = BigDecimal.ZERO;
+            int optionDelta = 0;
             if (itemRequest.getOptions() != null) {
                 for (OrderItemOptionRequest optionRequest : itemRequest.getOptions()) {
                     MenuOption menuOption = menuOptionRepository.findById(optionRequest.getMenuOptionId())
@@ -59,15 +56,14 @@ public class PriceCalculator {
                     
                     // MenuOption의 calculateExtraCost 메서드 사용
                     int extraCost = menuOption.calculateExtraCost(optionRequest.getOrderedQty());
-                    optionDelta = optionDelta.add(new BigDecimal(extraCost));
+                    optionDelta += extraCost;
                 }
             }
 
             // 아이템 소계 계산
-            BigDecimal itemSubtotal = base.add(styleExtra).add(optionDelta)
-                    .multiply(new BigDecimal(itemRequest.getOrderedQty()));
+            int itemSubtotal = (base + styleExtra + optionDelta) * itemRequest.getOrderedQty();
 
-            total = total.add(itemSubtotal);
+            total += itemSubtotal;
         }
 
         // VIP 할인 적용
@@ -75,9 +71,9 @@ public class PriceCalculator {
                 .orElseThrow(() -> new IllegalArgumentException("고객을 찾을 수 없습니다: " + req.getCustomerId()));
 
         if (customer.getOrderCount() >= 10 && (customer.getOrderCount() + 1) % 11 == 0) {
-            total = total.multiply(new BigDecimal("0.9")).setScale(0, RoundingMode.DOWN);
+            total = (int) (total * 0.9);
         }
 
-        return total.intValue();
+        return total;
     }
 }

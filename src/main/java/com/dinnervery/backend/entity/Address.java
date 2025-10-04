@@ -18,16 +18,16 @@ public class Address extends BaseEntity {
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
-    @Column(name = "addr_detail", nullable = false)
-    private String addrDetail;
+    @Column(name = "address", nullable = false)
+    private String address;
+
+    @Column(name = "detail_address")
+    private String detailAddress;
 
     @Builder
-    public Address(Customer customer, String addrDetail) {
+    public Address(Customer customer, String address, String detailAddress) {
         this.customer = customer;
-        this.addrDetail = addrDetail;
-    }
-
-    public void updateAddressDetail(String newAddrDetail) {
-        this.addrDetail = newAddrDetail;
+        this.address = address;
+        this.detailAddress = detailAddress;
     }
 }

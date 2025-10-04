@@ -8,7 +8,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,11 +32,11 @@ public class OrderItem extends BaseEntity {
     @Column(name = "ordered_qty", nullable = false)
     private Integer orderedQty;
 
-    @Column(name = "item_price", nullable = false, precision = 8, scale = 0)
-    private BigDecimal itemPrice;
+    @Column(name = "item_price", nullable = false)
+    private int itemPrice;
 
-    @Column(name = "item_total_price", nullable = false, precision = 8, scale = 0)
-    private BigDecimal itemTotalPrice;
+    @Column(name = "item_total_price", nullable = false)
+    private int itemTotalPrice;
 
     @OneToMany(mappedBy = "orderItem", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItemOption> orderItemOptions = new ArrayList<>();
@@ -56,16 +55,15 @@ public class OrderItem extends BaseEntity {
 
     public void calculateItemPrice() {
         // 기본 가격 + 서빙 스타일 추가비
-        BigDecimal basePrice = menu.getPrice().add(servingStyle.getExtraPrice());
+        int basePrice = menu.getPrice() + servingStyle.getExtraPrice();
         
         // 옵션 비용 추가
-        BigDecimal optionCost = orderItemOptions.stream()
-            .map(OrderItemOption::calculateExtraCost)
-            .map(BigDecimal::new)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        int optionCost = orderItemOptions.stream()
+            .mapToInt(OrderItemOption::calculateExtraCost)
+            .sum();
         
-        this.itemPrice = basePrice.add(optionCost);
-        this.itemTotalPrice = this.itemPrice.multiply(new BigDecimal(orderedQty));
+        this.itemPrice = basePrice + optionCost;
+        this.itemTotalPrice = this.itemPrice * orderedQty;
         
         // Order의 총 금액도 업데이트
         if (this.order != null) {
