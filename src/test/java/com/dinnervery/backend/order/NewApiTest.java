@@ -67,7 +67,7 @@ class NewApiTest {
     void setUp() {
         // 고객 생성
         customer = Customer.builder()
-                .loginId("test_customer")
+                .loginId("test_customer_" + System.currentTimeMillis())
                 .password("password")
                 .name("테스트 고객")
                 .phoneNumber("010-1234-5678")
@@ -119,8 +119,8 @@ class NewApiTest {
         
         // 영업시간 정보 검증
         assertThat(responseBody.get("isOpen")).isNotNull();
-        assertThat(responseBody.get("openTime")).isEqualTo("15:30");
-        assertThat(responseBody.get("closeTime")).isEqualTo("22:00");
+        assertThat(responseBody.get("openTime")).isEqualTo("17:00");
+        assertThat(responseBody.get("closeTime")).isEqualTo("23:00");
         assertThat(responseBody.get("lastOrderTime")).isEqualTo("21:30");
         assertThat(responseBody.get("message")).isNotNull();
     }

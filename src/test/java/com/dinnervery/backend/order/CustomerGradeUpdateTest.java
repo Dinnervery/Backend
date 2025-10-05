@@ -64,7 +64,7 @@ class CustomerGradeUpdateTest {
     void setUp() {
         // 고객 생성
         customer = Customer.builder()
-                .loginId("test_customer")
+                .loginId("test_customer_" + System.currentTimeMillis())
                 .password("password")
                 .name("테스트 고객")
                 .phoneNumber("010-1234-5678")

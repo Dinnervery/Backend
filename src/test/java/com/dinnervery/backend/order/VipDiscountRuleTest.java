@@ -92,7 +92,8 @@ class VipDiscountRuleTest {
         int totalPrice = priceCalculator.calcOrderTotal(request);
 
         // Then
-        // 주문 횟수 9회이므로 아직 VIP 할인 대상이 아님 (10회 이상이어야 함)
+        // 주문 횟수 14회이고 이번이 15번째 주문이므로 VIP 할인 미적용
+        // VIP 할인은 15회 이후에 16번째 주문마다 적용되므로 (16, 32, 48...)
         // 총 가격 90,000원 (할인 없음)
         assertThat(totalPrice).isEqualTo(90000);
     }
@@ -138,7 +139,7 @@ class VipDiscountRuleTest {
     }
 
     @Test
-    void 고객_주문횟수_21회_이번_22번째_주문_10퍼센트_할인() {
+    void 고객_주문횟수_15회_이번_16번째_주문_10퍼센트_할인() {
         // Given
         Customer customer = Customer.builder()
                 .loginId("test@example.com")
@@ -147,8 +148,8 @@ class VipDiscountRuleTest {
                 .phoneNumber("01012345678")
                 .build();
         
-        // 주문 횟수를 21회로 설정
-        for (int i = 0; i < 21; i++) {
+        // 주문 횟수를 15회로 설정
+        for (int i = 0; i < 15; i++) {
             customer.incrementOrderCount();
         }
 
@@ -172,13 +173,13 @@ class VipDiscountRuleTest {
         int totalPrice = priceCalculator.calcOrderTotal(request);
 
         // Then
-        // 주문 횟수 21회이고 이번이 22번째 주문이므로 VIP 할인 적용
+        // 주문 횟수 15회이고 이번이 16번째 주문이므로 VIP 할인 적용
         // 총 가격 90,000원 * 0.9 = 81,000원 (소수점 버림)
         assertThat(totalPrice).isEqualTo(81000);
     }
 
     @Test
-    void 고객_주문횟수_11회_이번_12번째_주문_미할인() {
+    void 고객_주문횟수_14회_이번_15번째_주문_미할인() {
         // Given
         Customer customer = Customer.builder()
                 .loginId("test@example.com")
@@ -187,8 +188,8 @@ class VipDiscountRuleTest {
                 .phoneNumber("01012345678")
                 .build();
         
-        // 주문 횟수를 11회로 설정
-        for (int i = 0; i < 11; i++) {
+        // 주문 횟수를 14회로 설정
+        for (int i = 0; i < 14; i++) {
             customer.incrementOrderCount();
         }
 
@@ -212,8 +213,8 @@ class VipDiscountRuleTest {
         int totalPrice = priceCalculator.calcOrderTotal(request);
 
         // Then
-        // 주문 횟수 11회이고 이번이 12번째 주문이므로 VIP 할인 미적용
-        // VIP 할인은 11번째 주문마다 적용되므로 (11, 22, 33...)
+        // 주문 횟수 14회이고 이번이 15번째 주문이므로 VIP 할인 미적용
+        // VIP 할인은 15회 이후에 16번째 주문마다 적용되므로 (16, 32, 48...)
         // 총 가격 90,000원 (할인 없음)
         assertThat(totalPrice).isEqualTo(90000);
     }
