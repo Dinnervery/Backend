@@ -9,6 +9,7 @@ import com.dinnervery.backend.repository.AddressRepository;
 import com.dinnervery.backend.repository.CustomerRepository;
 import com.dinnervery.backend.repository.MenuRepository;
 import com.dinnervery.backend.repository.OrderRepository;
+import com.dinnervery.backend.repository.ServingStyleRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ public class OrderService {
     private final CustomerRepository customerRepository;
     private final MenuRepository menuRepository;
     private final AddressRepository addressRepository;
+    private final ServingStyleRepository servingStyleRepository;
     private final BusinessHoursService businessHoursService;
 
     @Transactional
@@ -65,9 +67,13 @@ public class OrderService {
         for (OrderItemCreateRequest itemRequest : request.getOrderItems()) {
             Menu menu = menuRepository.findById(itemRequest.getMenuId())
                     .orElseThrow(() -> new IllegalArgumentException("메뉴를 찾을 수 없습니다: " + itemRequest.getMenuId()));
+            
+            ServingStyle servingStyle = servingStyleRepository.findById(itemRequest.getServingStyleId())
+                    .orElseThrow(() -> new IllegalArgumentException("서빙 스타일을 찾을 수 없습니다: " + itemRequest.getServingStyleId()));
 
             OrderItem orderItem = OrderItem.builder()
                     .menu(menu)
+                    .servingStyle(servingStyle)
                     .quantity(itemRequest.getQuantity())
                     .build();
 

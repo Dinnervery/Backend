@@ -26,6 +26,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
 import java.util.Map;
@@ -38,7 +39,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Transactional
 class OrderIntegrationTest {
 
     @Autowired
@@ -62,6 +62,9 @@ class OrderIntegrationTest {
     @Autowired
     private ServingStyleRepository servingStyleRepository;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     private Customer testCustomer;
     private Menu testMenu;
     private Menu testMenuEntity;
@@ -69,21 +72,15 @@ class OrderIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        // DB 초기화 - 모든 테이블 정리
-        orderItemRepository.deleteAll();
-        orderRepository.deleteAll();
-        addressRepository.deleteAll();
-        customerRepository.deleteAll();
-        menuRepository.deleteAll();
-        servingStyleRepository.deleteAll();
-        
-        // 강제 플러시
-        orderItemRepository.flush();
-        orderRepository.flush();
-        addressRepository.flush();
-        customerRepository.flush();
-        menuRepository.flush();
-        servingStyleRepository.flush();
+        // SQL을 사용한 강제 테이블 정리 (외래키 제약조건 무시)
+        jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY FALSE");
+        jdbcTemplate.execute("TRUNCATE TABLE order_items");
+        jdbcTemplate.execute("TRUNCATE TABLE orders");
+        jdbcTemplate.execute("TRUNCATE TABLE addresses");
+        jdbcTemplate.execute("TRUNCATE TABLE customers");
+        jdbcTemplate.execute("TRUNCATE TABLE menus");
+        jdbcTemplate.execute("TRUNCATE TABLE serving_styles");
+        jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY TRUE");
         
         // 테스트 고객 생성
         testCustomer = Customer.builder()

@@ -7,7 +7,9 @@ import com.dinnervery.backend.dto.order.OrderResponse;
 import com.dinnervery.backend.dto.request.OrderCreateRequest;
 import com.dinnervery.backend.dto.request.PriceCalculationRequest;
 import com.dinnervery.backend.dto.request.ReorderRequest;
+import com.dinnervery.backend.entity.Address;
 import com.dinnervery.backend.entity.Customer;
+import com.dinnervery.backend.repository.AddressRepository;
 import com.dinnervery.backend.repository.CustomerRepository;
 import com.dinnervery.backend.repository.MenuOptionRepository;
 import com.dinnervery.backend.entity.Menu;
@@ -46,6 +48,7 @@ public class OrderController {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final CustomerRepository customerRepository;
+    private final AddressRepository addressRepository;
     private final MenuRepository menuRepository;
     private final ServingStyleRepository servingStyleRepository;
     private final MenuOptionRepository menuOptionRepository;
@@ -426,9 +429,16 @@ public class OrderController {
         Customer customer = customerRepository.findById(request.getCustomerId())
                 .orElseThrow(() -> new IllegalArgumentException("고객을 찾을 수 없습니다: " + request.getCustomerId()));
 
+        // 주소 조회
+        Address address = addressRepository.findById(request.getAddressId())
+                .orElseThrow(() -> new IllegalArgumentException("주소를 찾을 수 없습니다: " + request.getAddressId()));
+
         // 4) 주문 생성
         Order order = Order.builder()
                 .customer(customer)
+                .address(address)
+                .cardNumber(request.getCardNumber())
+                .deliveryTime(request.getDeliveryTime())
                 .build();
 
         Order savedOrder = orderRepository.save(order);

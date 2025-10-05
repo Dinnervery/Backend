@@ -23,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
 import java.util.UUID;
@@ -34,7 +35,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Transactional
 class ReorderTest {
 
     @Autowired
@@ -53,6 +53,9 @@ class ReorderTest {
     private AddressRepository addressRepository;
 
     @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
     private ServingStyleRepository servingStyleRepository;
 
     private Customer customer;
@@ -65,19 +68,14 @@ class ReorderTest {
 
     @BeforeEach
     void setUp() {
-        // DB 초기화 - 모든 테이블 정리
-        addressRepository.deleteAll();
-        orderRepository.deleteAll();
-        customerRepository.deleteAll();
-        menuRepository.deleteAll();
-        servingStyleRepository.deleteAll();
-        
-        // 강제 플러시
-        addressRepository.flush();
-        orderRepository.flush();
-        customerRepository.flush();
-        menuRepository.flush();
-        servingStyleRepository.flush();
+        // SQL을 사용한 강제 테이블 정리 (외래키 제약조건 무시)
+        jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY FALSE");
+        jdbcTemplate.execute("TRUNCATE TABLE addresses");
+        jdbcTemplate.execute("TRUNCATE TABLE orders");
+        jdbcTemplate.execute("TRUNCATE TABLE customers");
+        jdbcTemplate.execute("TRUNCATE TABLE menus");
+        jdbcTemplate.execute("TRUNCATE TABLE serving_styles");
+        jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY TRUE");
         
         // 고객 생성
         customer = Customer.builder()
