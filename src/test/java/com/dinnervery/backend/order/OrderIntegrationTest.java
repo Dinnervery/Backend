@@ -65,7 +65,7 @@ class OrderIntegrationTest {
     void setUp() {
         // 테스트 고객 생성
         testCustomer = Customer.builder()
-                .loginId("test123_" + System.currentTimeMillis())
+                .loginId("test123_" + Thread.currentThread().getId() + "_" + System.nanoTime())
                 .password("password123")
                 .name("테스트 고객")
                 .phoneNumber("01012345678")

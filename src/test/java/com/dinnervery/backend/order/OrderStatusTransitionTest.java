@@ -53,7 +53,7 @@ class OrderStatusTransitionTest {
     void setUp() {
         // 고객 생성
         customer = Customer.builder()
-                .loginId("test_customer_" + System.currentTimeMillis())
+                .loginId("test_customer_" + Thread.currentThread().getId() + "_" + System.nanoTime())
                 .password("password")
                 .name("테스트 고객")
                 .phoneNumber("010-1234-5678")
@@ -77,7 +77,7 @@ class OrderStatusTransitionTest {
 
         // 직원 생성
         cook = Employee.builder()
-                .loginId("cook1_" + System.currentTimeMillis())
+                .loginId("cook1_" + Thread.currentThread().getId() + "_" + System.nanoTime())
                 .password("password")
                 .name("요리사")
                 .phoneNumber("010-1111-1111")
@@ -86,7 +86,7 @@ class OrderStatusTransitionTest {
         cook = employeeRepository.save(cook);
 
         deliver = Employee.builder()
-                .loginId("deliver1_" + System.currentTimeMillis())
+                .loginId("deliver1_" + Thread.currentThread().getId() + "_" + System.nanoTime())
                 .password("password")
                 .name("배달원")
                 .phoneNumber("010-2222-2222")
