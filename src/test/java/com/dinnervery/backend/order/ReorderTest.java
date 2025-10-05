@@ -22,6 +22,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -33,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@Transactional
 class ReorderTest {
 
     @Autowired
@@ -63,10 +65,19 @@ class ReorderTest {
 
     @BeforeEach
     void setUp() {
-        // DB 초기화
+        // DB 초기화 - 모든 테이블 정리
         addressRepository.deleteAll();
         orderRepository.deleteAll();
         customerRepository.deleteAll();
+        menuRepository.deleteAll();
+        servingStyleRepository.deleteAll();
+        
+        // 강제 플러시
+        addressRepository.flush();
+        orderRepository.flush();
+        customerRepository.flush();
+        menuRepository.flush();
+        servingStyleRepository.flush();
         
         // 고객 생성
         customer = Customer.builder()

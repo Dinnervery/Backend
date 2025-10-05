@@ -17,7 +17,6 @@ import com.dinnervery.backend.repository.MenuOptionRepository;
 import com.dinnervery.backend.repository.ServingStyleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@Transactional
 class NewApiTest {
 
     @Autowired
@@ -71,9 +71,19 @@ class NewApiTest {
 
     @BeforeEach
     void setUp() {
-        // DB 초기화
+        // DB 초기화 - 모든 테이블 정리
         addressRepository.deleteAll();
         customerRepository.deleteAll();
+        menuRepository.deleteAll();
+        menuOptionRepository.deleteAll();
+        servingStyleRepository.deleteAll();
+        
+        // 강제 플러시
+        addressRepository.flush();
+        customerRepository.flush();
+        menuRepository.flush();
+        menuOptionRepository.flush();
+        servingStyleRepository.flush();
         
         // 고객 생성
         customer = Customer.builder()

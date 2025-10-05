@@ -19,6 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 import java.util.UUID;
@@ -30,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@Transactional
 class OrderStatusTransitionTest {
 
     @Autowired
@@ -55,11 +57,17 @@ class OrderStatusTransitionTest {
 
     @BeforeEach
     void setUp() {
-        // DB 초기화
+        // DB 초기화 - 모든 테이블 정리
         addressRepository.deleteAll();
         orderRepository.deleteAll();
         employeeRepository.deleteAll();
         customerRepository.deleteAll();
+        
+        // 강제 플러시
+        addressRepository.flush();
+        orderRepository.flush();
+        employeeRepository.flush();
+        customerRepository.flush();
         
         // 고객 생성
         customer = Customer.builder()

@@ -29,6 +29,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 import java.util.UUID;
@@ -39,6 +40,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@Transactional
 class CustomerGradeUpdateTest {
 
     @Autowired
@@ -102,6 +104,19 @@ class CustomerGradeUpdateTest {
         menuRepository.deleteAll();
         servingStyleRepository.deleteAll();
         employeeRepository.deleteAll();
+        
+        // 추가적인 정리 - 모든 테이블 강제 삭제
+        orderItemOptionRepository.flush();
+        orderItemRepository.flush();
+        orderRepository.flush();
+        cartItemRepository.flush();
+        cartRepository.flush();
+        addressRepository.flush();
+        customerRepository.flush();
+        menuOptionRepository.flush();
+        menuRepository.flush();
+        servingStyleRepository.flush();
+        employeeRepository.flush();
         
         // 고객 생성
         customer = Customer.builder()

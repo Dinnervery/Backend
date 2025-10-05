@@ -25,6 +25,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@Transactional
 class OrderIntegrationTest {
 
     @Autowired
@@ -67,9 +69,21 @@ class OrderIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        // DB 초기화
+        // DB 초기화 - 모든 테이블 정리
+        orderItemRepository.deleteAll();
+        orderRepository.deleteAll();
         addressRepository.deleteAll();
         customerRepository.deleteAll();
+        menuRepository.deleteAll();
+        servingStyleRepository.deleteAll();
+        
+        // 강제 플러시
+        orderItemRepository.flush();
+        orderRepository.flush();
+        addressRepository.flush();
+        customerRepository.flush();
+        menuRepository.flush();
+        servingStyleRepository.flush();
         
         // 테스트 고객 생성
         testCustomer = Customer.builder()
