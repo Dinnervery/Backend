@@ -19,6 +19,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -51,9 +52,15 @@ class OrderStatusTransitionTest {
 
     @BeforeEach
     void setUp() {
+        // DB 초기화
+        addressRepository.deleteAll();
+        orderRepository.deleteAll();
+        employeeRepository.deleteAll();
+        customerRepository.deleteAll();
+        
         // 고객 생성
         customer = Customer.builder()
-                .loginId("test_customer_" + Thread.currentThread().getId() + "_" + System.nanoTime())
+                .loginId("test_customer_" + UUID.randomUUID())
                 .password("password")
                 .name("테스트 고객")
                 .phoneNumber("010-1234-5678")
@@ -77,7 +84,7 @@ class OrderStatusTransitionTest {
 
         // 직원 생성
         cook = Employee.builder()
-                .loginId("cook1_" + Thread.currentThread().getId() + "_" + System.nanoTime())
+                .loginId("cook1_" + UUID.randomUUID())
                 .password("password")
                 .name("요리사")
                 .phoneNumber("010-1111-1111")
@@ -86,7 +93,7 @@ class OrderStatusTransitionTest {
         cook = employeeRepository.save(cook);
 
         deliver = Employee.builder()
-                .loginId("deliver1_" + Thread.currentThread().getId() + "_" + System.nanoTime())
+                .loginId("deliver1_" + UUID.randomUUID())
                 .password("password")
                 .name("배달원")
                 .phoneNumber("010-2222-2222")

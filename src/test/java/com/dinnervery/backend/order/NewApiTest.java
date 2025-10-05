@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -65,9 +66,13 @@ class NewApiTest {
 
     @BeforeEach
     void setUp() {
+        // DB 초기화
+        addressRepository.deleteAll();
+        customerRepository.deleteAll();
+        
         // 고객 생성
         customer = Customer.builder()
-                .loginId("test_customer_" + Thread.currentThread().getId() + "_" + System.nanoTime())
+                .loginId("test_customer_" + UUID.randomUUID())
                 .password("password")
                 .name("테스트 고객")
                 .phoneNumber("010-1234-5678")
