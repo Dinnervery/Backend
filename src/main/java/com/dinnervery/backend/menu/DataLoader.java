@@ -3,9 +3,11 @@ package com.dinnervery.backend.menu;
 import com.dinnervery.backend.repository.MenuOptionRepository;
 import com.dinnervery.backend.repository.MenuRepository;
 import com.dinnervery.backend.repository.ServingStyleRepository;
+import com.dinnervery.backend.repository.EmployeeRepository;
 import com.dinnervery.backend.entity.Menu;
 import com.dinnervery.backend.entity.MenuOption;
 import com.dinnervery.backend.entity.ServingStyle;
+import com.dinnervery.backend.entity.Employee;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
@@ -18,6 +20,7 @@ public class DataLoader implements CommandLineRunner {
     private final ServingStyleRepository servingStyleRepository;
     private final MenuRepository menuRepository;
     private final MenuOptionRepository menuOptionRepository;
+    private final EmployeeRepository employeeRepository;
 
     @Override
     public void run(String... args) throws Exception {
@@ -29,6 +32,9 @@ public class DataLoader implements CommandLineRunner {
         
         // 메뉴 옵션 생성
         createMenuOptions();
+        
+        // 직원 계정 생성
+        createEmployees();
         
         System.out.println("초기 데이터 로딩이 완료되었습니다.");
     }
@@ -220,6 +226,30 @@ public class DataLoader implements CommandLineRunner {
                     .defaultQty(1)
                     .build();
             menuOptionRepository.save(champagneSteak);
+        }
+    }
+
+    private void createEmployees() {
+        if (employeeRepository.count() == 0) {
+            // 요리사 계정 생성
+            Employee cook = Employee.builder()
+                    .loginId("cook")
+                    .password("cook123")
+                    .name("요리사")
+                    .phoneNumber("010-1111-1111")
+                    .task(Employee.EmployeeTask.COOK)
+                    .build();
+            employeeRepository.save(cook);
+
+            // 배달원 계정 생성
+            Employee deliveryPerson = Employee.builder()
+                    .loginId("delivery")
+                    .password("delivery123")
+                    .name("배달원")
+                    .phoneNumber("010-2222-2222")
+                    .task(Employee.EmployeeTask.DELIVERY)
+                    .build();
+            employeeRepository.save(deliveryPerson);
         }
     }
 }

@@ -7,9 +7,9 @@ import java.time.LocalTime;
 @Service
 public class BusinessHoursService {
 
-    // 영업시간 설정 (오후 5시 ~ 오후 11시)
-    private static final LocalTime OPEN_TIME = LocalTime.of(17, 0); // 오후 5시
-    private static final LocalTime CLOSE_TIME = LocalTime.of(23, 0); // 오후 11시
+    // 영업시간 설정 (오후 3시 30분 ~ 오후 10시)
+    private static final LocalTime OPEN_TIME = LocalTime.of(15, 30); // 오후 3시 30분
+    private static final LocalTime CLOSE_TIME = LocalTime.of(22, 0); // 오후 10시
     private static final LocalTime LAST_ORDER_TIME = LocalTime.of(21, 30); // 오후 9시 30분
 
     /**
