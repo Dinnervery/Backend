@@ -36,3 +36,12 @@ out/
 ### VS Code ###
 .vscode/
 .history/
+
+### Additional ###
+*.class
+*.jar
+*.log
+*.swp
+*.tmp
+.DS_Store
+Thumbs.db

@@ -21,7 +21,9 @@ import com.dinnervery.backend.repository.OrderItemOptionRepository;
 import com.dinnervery.backend.repository.EmployeeRepository;
 import com.dinnervery.backend.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.ResponseEntity;
@@ -36,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class CustomerGradeUpdateTest {
 
     @Autowired
@@ -133,6 +136,7 @@ class CustomerGradeUpdateTest {
     }
 
     @Test
+    @org.junit.jupiter.api.Order(2)
     void 주문_완료_시_고객_주문수_증가_및_등급_갱신_테스트() {
         // 초기 상태 확인
         assertThat(customer.getOrderCount()).isEqualTo(0);
@@ -193,6 +197,7 @@ class CustomerGradeUpdateTest {
     }
 
     @Test
+    @org.junit.jupiter.api.Order(4)
     void 고객_등급_갱신_메서드_테스트() {
         // 초기 상태
         assertThat(customer.getGrade()).isEqualTo(Customer.CustomerGrade.BASIC);
@@ -218,6 +223,7 @@ class CustomerGradeUpdateTest {
 
 
     @Test
+    @org.junit.jupiter.api.Order(1)
     void 고객_정보_조회_API_테스트() {
         // 고객 정보 조회 API 호출
         ResponseEntity<Map<String, Object>> response = memberController.getCustomer(customer.getId());
@@ -239,6 +245,7 @@ class CustomerGradeUpdateTest {
 
 
     @Test
+    @org.junit.jupiter.api.Order(3)
     void 메뉴_목록_조회_API_BASIC_고객_테스트() {
         // 메뉴 목록 조회 API 호출 (BASIC 고객)
         ResponseEntity<Map<String, Object>> response = menuController.getAllMenus(customer.getId());

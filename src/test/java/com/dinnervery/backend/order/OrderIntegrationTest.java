@@ -17,13 +17,14 @@ import com.dinnervery.backend.entity.OrderItem;
 import com.dinnervery.backend.entity.ServingStyle;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -35,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class OrderIntegrationTest {
 
     @Autowired
@@ -109,6 +111,7 @@ class OrderIntegrationTest {
     }
 
     @Test
+    @org.junit.jupiter.api.Order(1)
     void 가격_계산_API_테스트() {
         // 가격 계산 요청 생성
         PriceCalculationRequest.OrderItemRequest orderItem = PriceCalculationRequest.OrderItemRequest.builder()
@@ -145,6 +148,7 @@ class OrderIntegrationTest {
     
 
     @Test
+    @org.junit.jupiter.api.Order(2)
     void 주문_생성_후_저장된_데이터_검증() {
         // Given
         OrderItemCreateRequest itemRequest = OrderItemCreateRequest.builder()
@@ -203,6 +207,7 @@ class OrderIntegrationTest {
 
 
     @Test
+    @org.junit.jupiter.api.Order(3)
     void 주문_조회_테스트() {
         // 주소 생성
         Address         testAddress = Address.builder()

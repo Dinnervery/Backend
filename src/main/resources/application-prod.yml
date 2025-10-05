@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:mysql://db:3306/dinnervery?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
-    username: dinner
-    password: dinnerpwd
+    url: jdbc:mysql://${DB_HOST:db}:${DB_PORT:3306}/${DB_NAME:dinnervery}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+    username: ${DB_USERNAME:dinner}
+    password: ${DB_PASSWORD:dinnerpwd}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
