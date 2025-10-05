@@ -21,13 +21,9 @@ public class Address extends BaseEntity {
     @Column(name = "address", nullable = false)
     private String address;
 
-    @Column(name = "detail_address")
-    private String detailAddress;
-
     @Builder
-    public Address(Customer customer, String address, String detailAddress) {
+    public Address(Customer customer, String address) {
         this.customer = customer;
         this.address = address;
-        this.detailAddress = detailAddress;
     }
 }

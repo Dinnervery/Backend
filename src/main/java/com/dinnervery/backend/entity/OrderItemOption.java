@@ -22,13 +22,13 @@ public class OrderItemOption extends BaseEntity {
     @JoinColumn(name = "menu_option_id", nullable = false)
     private MenuOption menuOption;
 
-    @Column(name = "ordered_qty", nullable = false)
-    private Integer orderedQty;
+    @Column(name = "quantity", nullable = false)
+    private Integer quantity;
 
     @Builder
-    public OrderItemOption(MenuOption menuOption, Integer orderedQty) {
+    public OrderItemOption(MenuOption menuOption, Integer quantity) {
         this.menuOption = menuOption;
-        this.orderedQty = orderedQty;
+        this.quantity = quantity;
     }
 
     public void setOrderItem(OrderItem orderItem) {
@@ -38,8 +38,8 @@ public class OrderItemOption extends BaseEntity {
         }
     }
 
-    public void updateOrderedQty(Integer newOrderedQty) {
-        this.orderedQty = newOrderedQty;
+    public void updateQuantity(Integer newQuantity) {
+        this.quantity = newQuantity;
         if (this.orderItem != null) {
             this.orderItem.calculateItemPrice();
         }
@@ -50,6 +50,6 @@ public class OrderItemOption extends BaseEntity {
      * @return 추가 비용 (양수: 추가, 0: 기본)
      */
     public int calculateExtraCost() {
-        return menuOption.calculateExtraCost(orderedQty);
+        return menuOption.calculateExtraCost(quantity);
     }
 }

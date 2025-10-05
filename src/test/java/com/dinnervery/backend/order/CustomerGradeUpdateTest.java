@@ -75,7 +75,6 @@ class CustomerGradeUpdateTest {
         address = Address.builder()
                 .customer(customer)
                 .address("서울시 강남구 테헤란로 123")
-                .detailAddress("456호")
                 .build();
         address = addressRepository.save(address);
 
@@ -113,7 +112,7 @@ class CustomerGradeUpdateTest {
         OrderItem orderItem = OrderItem.builder()
                 .menu(menu)
                 .servingStyle(servingStyle)
-                .orderedQty(1)
+                .quantity(1)
                 .build();
         order.addOrderItem(orderItem);
         order = orderRepository.save(order);
@@ -128,8 +127,8 @@ class CustomerGradeUpdateTest {
         assertThat(updatedCustomer.getOrderCount()).isEqualTo(1);
         assertThat(updatedCustomer.getGrade()).isEqualTo(Customer.CustomerGrade.BASIC);
 
-        // 10번째 주문까지 완료하여 VIP 등급 달성
-        for (int i = 2; i <= 10; i++) {
+        // 15번째 주문까지 완료하여 VIP 등급 달성
+        for (int i = 2; i <= 15; i++) {
             Order newOrder = Order.builder()
                     .customer(customer)
                     .address(address)
@@ -141,7 +140,7 @@ class CustomerGradeUpdateTest {
             OrderItem newOrderItem = OrderItem.builder()
                     .menu(menu)
                     .servingStyle(servingStyle)
-                    .orderedQty(1)
+                    .quantity(1)
                     .build();
             newOrder.addOrderItem(newOrderItem);
             newOrder = orderRepository.save(newOrder);
@@ -181,8 +180,8 @@ class CustomerGradeUpdateTest {
 
     @Test
     void VIP_할인_적용_조건_테스트() {
-        // 10번 주문하여 VIP 등급 달성
-        for (int i = 1; i <= 10; i++) {
+        // 15번 주문하여 VIP 등급 달성
+        for (int i = 1; i <= 15; i++) {
             Order order = Order.builder()
                     .customer(customer)
                     .address(address)
@@ -194,7 +193,7 @@ class CustomerGradeUpdateTest {
             OrderItem orderItem = OrderItem.builder()
                     .menu(menu)
                     .servingStyle(servingStyle)
-                    .orderedQty(1)
+                    .quantity(1)
                     .build();
             order.addOrderItem(orderItem);
             order = orderRepository.save(order);
@@ -204,32 +203,32 @@ class CustomerGradeUpdateTest {
 
         Customer vipCustomer = customerRepository.findById(customer.getId()).orElseThrow();
         assertThat(vipCustomer.getGrade()).isEqualTo(Customer.CustomerGrade.VIP);
-        assertThat(vipCustomer.getOrderCount()).isEqualTo(10);
+        assertThat(vipCustomer.getOrderCount()).isEqualTo(15);
 
-        // 11번째 주문 시 VIP 할인 적용 가능
+        // 16번째 주문 시 VIP 할인 적용 가능
         assertThat(vipCustomer.isVipDiscountEligible()).isTrue();
 
-        // 12번째 주문 완료 후
-        Order order11 = Order.builder()
+        // 17번째 주문 완료 후
+        Order order16 = Order.builder()
                 .customer(customer)
                 .address(address)
                 .cardNumber("1234-5678-9012-3456")
                 .build();
-        order11 = orderRepository.save(order11);
+        order16 = orderRepository.save(order16);
 
         // 주문 항목 추가
-        OrderItem orderItem11 = OrderItem.builder()
+        OrderItem orderItem16 = OrderItem.builder()
                 .menu(menu)
                 .servingStyle(servingStyle)
-                .orderedQty(1)
+                .quantity(1)
                 .build();
-        order11.addOrderItem(orderItem11);
-        order11 = orderRepository.save(order11);
+        order16.addOrderItem(orderItem16);
+        order16 = orderRepository.save(order16);
 
-        orderService.completeOrder(order11.getId());
+        orderService.completeOrder(order16.getId());
 
         Customer updatedCustomer = customerRepository.findById(customer.getId()).orElseThrow();
-        assertThat(updatedCustomer.getOrderCount()).isEqualTo(11);
+        assertThat(updatedCustomer.getOrderCount()).isEqualTo(16);
         assertThat(updatedCustomer.isVipDiscountEligible()).isFalse();
     }
 

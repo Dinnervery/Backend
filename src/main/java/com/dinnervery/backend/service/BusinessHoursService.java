@@ -7,9 +7,9 @@ import java.time.LocalTime;
 @Service
 public class BusinessHoursService {
 
-    // 영업시간 설정 (예: 오후 5시 ~ 오후 11시)
-    private static final LocalTime OPEN_TIME = LocalTime.of(15, 30); // 오후 3시 30분
-    private static final LocalTime CLOSE_TIME = LocalTime.of(22, 0); // 오후 10시
+    // 영업시간 설정 (오후 5시 ~ 오후 11시)
+    private static final LocalTime OPEN_TIME = LocalTime.of(17, 0); // 오후 5시
+    private static final LocalTime CLOSE_TIME = LocalTime.of(23, 0); // 오후 11시
     private static final LocalTime LAST_ORDER_TIME = LocalTime.of(21, 30); // 오후 9시 30분
 
     /**
@@ -20,6 +20,45 @@ public class BusinessHoursService {
         LocalTime now = LocalTime.now();
         
         return !now.isBefore(OPEN_TIME) && now.isBefore(CLOSE_TIME);
+    }
+
+    /**
+     * 현재 시간이 라스트오더 시간 이후인지 확인
+     * @return 라스트오더 시간 이후이면 true, 아니면 false
+     */
+    public boolean isAfterLastOrderTime() {
+        LocalTime now = LocalTime.now();
+        return now.isAfter(LAST_ORDER_TIME);
+    }
+
+    /**
+     * 배송 희망 시간이 유효한지 확인
+     * @param deliveryTime 배송 희망 시간
+     * @return 유효하면 true, 아니면 false
+     */
+    public boolean isValidDeliveryTime(LocalTime deliveryTime) {
+        LocalTime now = LocalTime.now();
+        LocalTime minDeliveryTime = now.plusMinutes(30);
+        
+        // 배송 가능 시간: 16:00 ~ 22:00
+        LocalTime deliveryStartTime = LocalTime.of(16, 0);
+        LocalTime deliveryEndTime = LocalTime.of(22, 0);
+        
+        // 최소 배송 시간과 배송 가능 시간 중 더 늦은 시간을 기준으로 함
+        LocalTime effectiveMinTime = minDeliveryTime.isAfter(deliveryStartTime) ? minDeliveryTime : deliveryStartTime;
+        
+        // 10분 단위로 정렬
+        int minutes = effectiveMinTime.getMinute();
+        int roundedMinutes = ((minutes + 9) / 10) * 10;
+        if (roundedMinutes >= 60) {
+            effectiveMinTime = effectiveMinTime.plusHours(1).withMinute(0);
+        } else {
+            effectiveMinTime = effectiveMinTime.withMinute(roundedMinutes);
+        }
+        
+        return !deliveryTime.isBefore(effectiveMinTime) && 
+               !deliveryTime.isAfter(deliveryEndTime) &&
+               deliveryTime.getMinute() % 10 == 0;
     }
 
     /**

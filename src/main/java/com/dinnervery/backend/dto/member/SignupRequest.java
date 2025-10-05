@@ -30,6 +30,4 @@ public class SignupRequest {
 
     @NotBlank(message = "주소는 필수입니다")
     private String address;
-
-    private String detailAddress;
 }

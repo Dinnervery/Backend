@@ -72,7 +72,6 @@ class NewApiTest {
                 .name("테스트 고객")
                 .phoneNumber("010-1234-5678")
                 .address("서울시 강남구")
-                .detailAddress("테헤란로 123")
                 .build();
         customer = customerRepository.save(customer);
 
@@ -80,7 +79,6 @@ class NewApiTest {
         address = Address.builder()
                 .customer(customer)
                 .address("서울시 강남구 테헤란로 123")
-                .detailAddress("456호")
                 .build();
         address = addressRepository.save(address);
 
@@ -269,7 +267,7 @@ class NewApiTest {
         assertThat(servingStyleData.get("name")).isEqualTo(servingStyle.getName());
         assertThat(servingStyleData.get("price")).isEqualTo(servingStyle.getExtraPrice());
         
-        // totalAmount 검증
-        assertThat(responseBody.get("totalAmount")).isEqualTo(menu.getPrice());
+        // totalPrice 검증
+        assertThat(responseBody.get("totalPrice")).isEqualTo(menu.getPrice());
     }
 }

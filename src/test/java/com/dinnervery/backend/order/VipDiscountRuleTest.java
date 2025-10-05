@@ -1,12 +1,11 @@
 package com.dinnervery.backend.order;
 
-import com.dinnervery.backend.dto.order.OrderCreateRequest;
-import com.dinnervery.backend.dto.order.OrderItemRequest;
+import com.dinnervery.backend.dto.request.OrderCreateRequest;
+import com.dinnervery.backend.dto.request.OrderItemCreateRequest;
 import com.dinnervery.backend.entity.Customer;
-import com.dinnervery.backend.repository.CustomerRepository;
-import com.dinnervery.backend.repository.MenuOptionRepository;
 import com.dinnervery.backend.entity.Menu;
 import com.dinnervery.backend.entity.ServingStyle;
+import com.dinnervery.backend.repository.CustomerRepository;
 import com.dinnervery.backend.repository.MenuRepository;
 import com.dinnervery.backend.repository.ServingStyleRepository;
 import com.dinnervery.backend.service.PriceCalculator;
@@ -29,9 +28,6 @@ class VipDiscountRuleTest {
 
     @Mock
     private MenuRepository menuRepository;
-
-    @Mock
-    private MenuOptionRepository menuOptionRepository;
 
     @Mock
     private ServingStyleRepository servingStyleRepository;
@@ -62,7 +58,7 @@ class VipDiscountRuleTest {
     }
 
     @Test
-    void 고객_주문횟수_9회_이번_10번째_주문_미할인() {
+    void 고객_주문횟수_14회_이번_15번째_주문_미할인() {
         // Given
         Customer customer = Customer.builder()
                 .loginId("test123")
@@ -71,22 +67,21 @@ class VipDiscountRuleTest {
                 .phoneNumber("01012345678")
                 .build();
         
-        // 주문 횟수를 9회로 설정
-        for (int i = 0; i < 9; i++) {
+        // 주문 횟수를 14회로 설정
+        for (int i = 0; i < 14; i++) {
             customer.incrementOrderCount();
         }
 
-        OrderItemRequest itemRequest = OrderItemRequest.builder()
+        OrderItemCreateRequest itemRequest = OrderItemCreateRequest.builder()
                 .menuId(1L)
                 .servingStyleId(1L)
-                .orderedQty(1)
-                .options(List.of())
+                .quantity(1)
                 .build();
 
         OrderCreateRequest request = OrderCreateRequest.builder()
                 .customerId(1L)
                 .addressId(1L)
-                .items(List.of(itemRequest))
+                .orderItems(List.of(itemRequest))
                 .build();
 
         when(menuRepository.findById(1L)).thenReturn(Optional.of(testMenu));
@@ -103,7 +98,7 @@ class VipDiscountRuleTest {
     }
 
     @Test
-    void 고객_주문횟수_10회_이번_11번째_주문_10퍼센트_할인() {
+    void 고객_주문횟수_15회_이번_16번째_주문_10퍼센트_할인() {
         // Given
         Customer customer = Customer.builder()
                 .loginId("test123")
@@ -112,22 +107,21 @@ class VipDiscountRuleTest {
                 .phoneNumber("01012345678")
                 .build();
         
-        // 주문 횟수를 10회로 설정
-        for (int i = 0; i < 10; i++) {
+        // 주문 횟수를 15회로 설정
+        for (int i = 0; i < 15; i++) {
             customer.incrementOrderCount();
         }
 
-        OrderItemRequest itemRequest = OrderItemRequest.builder()
+        OrderItemCreateRequest itemRequest = OrderItemCreateRequest.builder()
                 .menuId(1L)
                 .servingStyleId(1L)
-                .orderedQty(1)
-                .options(List.of())
+                .quantity(1)
                 .build();
 
         OrderCreateRequest request = OrderCreateRequest.builder()
                 .customerId(1L)
                 .addressId(1L)
-                .items(List.of(itemRequest))
+                .orderItems(List.of(itemRequest))
                 .build();
 
         when(menuRepository.findById(1L)).thenReturn(Optional.of(testMenu));
@@ -138,7 +132,7 @@ class VipDiscountRuleTest {
         int totalPrice = priceCalculator.calcOrderTotal(request);
 
         // Then
-        // 주문 횟수 10회이고 이번이 11번째 주문이므로 VIP 할인 적용
+        // 주문 횟수 15회이고 이번이 16번째 주문이므로 VIP 할인 적용
         // 총 가격 90,000원 * 0.9 = 81,000원 (소수점 버림)
         assertThat(totalPrice).isEqualTo(81000);
     }
@@ -158,17 +152,16 @@ class VipDiscountRuleTest {
             customer.incrementOrderCount();
         }
 
-        OrderItemRequest itemRequest = OrderItemRequest.builder()
+        OrderItemCreateRequest itemRequest = OrderItemCreateRequest.builder()
                 .menuId(1L)
                 .servingStyleId(1L)
-                .orderedQty(1)
-                .options(List.of())
+                .quantity(1)
                 .build();
 
         OrderCreateRequest request = OrderCreateRequest.builder()
                 .customerId(1L)
                 .addressId(1L)
-                .items(List.of(itemRequest))
+                .orderItems(List.of(itemRequest))
                 .build();
 
         when(menuRepository.findById(1L)).thenReturn(Optional.of(testMenu));
@@ -199,17 +192,16 @@ class VipDiscountRuleTest {
             customer.incrementOrderCount();
         }
 
-        OrderItemRequest itemRequest = OrderItemRequest.builder()
+        OrderItemCreateRequest itemRequest = OrderItemCreateRequest.builder()
                 .menuId(1L)
                 .servingStyleId(1L)
-                .orderedQty(1)
-                .options(List.of())
+                .quantity(1)
                 .build();
 
         OrderCreateRequest request = OrderCreateRequest.builder()
                 .customerId(1L)
                 .addressId(1L)
-                .items(List.of(itemRequest))
+                .orderItems(List.of(itemRequest))
                 .build();
 
         when(menuRepository.findById(1L)).thenReturn(Optional.of(testMenu));

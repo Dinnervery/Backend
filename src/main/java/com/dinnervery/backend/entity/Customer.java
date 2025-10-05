@@ -28,9 +28,6 @@ public class Customer extends BaseEntity {
     @Column(name = "address", nullable = false)
     private String address;
 
-    @Column(name = "detail_address")
-    private String detailAddress;
-
     @Column(name = "order_count", nullable = false)
     private Integer orderCount = 0;
 
@@ -39,13 +36,12 @@ public class Customer extends BaseEntity {
     private CustomerGrade grade = CustomerGrade.BASIC;
 
     @Builder
-    public Customer(String loginId, String password, String name, String phoneNumber, String address, String detailAddress) {
+    public Customer(String loginId, String password, String name, String phoneNumber, String address) {
         this.loginId = loginId;
         this.password = password;
         this.name = name;
         this.phoneNumber = phoneNumber;
         this.address = address;
-        this.detailAddress = detailAddress;
     }
 
     public void incrementOrderCount() {
@@ -54,7 +50,7 @@ public class Customer extends BaseEntity {
     }
 
     public void updateGradeByOrderCount() {
-        if (this.orderCount >= 10) {
+        if (this.orderCount >= 15) {
             this.grade = CustomerGrade.VIP;
         } else {
             this.grade = CustomerGrade.BASIC;
@@ -62,7 +58,7 @@ public class Customer extends BaseEntity {
     }
 
     public boolean isVipDiscountEligible() {
-        return this.grade == CustomerGrade.VIP && (this.orderCount + 1) % 11 == 0;
+        return this.grade == CustomerGrade.VIP && (this.orderCount + 1) % 16 == 0;
     }
 
     public enum CustomerGrade {

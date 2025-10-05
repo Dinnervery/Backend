@@ -64,7 +64,6 @@ class OrderStatusTransitionTest {
         address1 = Address.builder()
                 .customer(customer)
                 .address("서울시 강남구 테헤란로 123")
-                .detailAddress("456호")
                 .build();
         address1 = addressRepository.save(address1);
 

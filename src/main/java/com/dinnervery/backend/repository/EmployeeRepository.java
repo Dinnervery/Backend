@@ -16,4 +16,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     boolean existsByLoginId(String loginId);
     
     List<Employee> findByTask(Employee.EmployeeTask task);
+    
+    List<Employee> findByTaskAndWorkStatus(Employee.EmployeeTask task, Employee.WorkStatus workStatus);
 }

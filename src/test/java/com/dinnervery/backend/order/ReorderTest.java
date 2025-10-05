@@ -1,6 +1,7 @@
 package com.dinnervery.backend.order;
 
 import com.dinnervery.backend.controller.OrderController;
+import com.dinnervery.backend.dto.request.ReorderRequest;
 import com.dinnervery.backend.entity.Address;
 import com.dinnervery.backend.entity.Customer;
 import com.dinnervery.backend.entity.Menu;
@@ -21,7 +22,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -94,14 +94,12 @@ class ReorderTest {
         address1 = Address.builder()
                 .customer(customer)
                 .address("서울시 강남구 테헤란로 123")
-                .detailAddress("101동 1001호")
                 .build();
         address1 = addressRepository.save(address1);
 
         address2 = Address.builder()
                 .customer(customer)
                 .address("서울시 서초구 서초대로 456")
-                .detailAddress("202동 2002호")
                 .build();
         address2 = addressRepository.save(address2);
 
@@ -117,14 +115,14 @@ class ReorderTest {
         OrderItem orderItem1 = OrderItem.builder()
                 .menu(menu1)
                 .servingStyle(servingStyle)
-                .orderedQty(2)
+                .quantity(2)
                 .build();
         originalOrder.addOrderItem(orderItem1);
 
         OrderItem orderItem2 = OrderItem.builder()
                 .menu(menu2)
                 .servingStyle(servingStyle)
-                .orderedQty(1)
+                .quantity(1)
                 .build();
         originalOrder.addOrderItem(orderItem2);
 
@@ -133,42 +131,55 @@ class ReorderTest {
 
     @Test
     void 재주문_API_테스트() {
+        // 재주문 요청 생성
+        ReorderRequest reorderRequest = ReorderRequest.builder()
+                .customerId(customer.getId())
+                .addressId(address2.getId()) // 다른 주소로 재주문
+                .cardNumber("9876-5432-1098-7654")
+                .build();
+        
         // 재주문 API 호출
-        ResponseEntity<Map<String, Object>> response = orderController.reorder(originalOrder.getId());
+        ResponseEntity<com.dinnervery.backend.dto.order.OrderResponse> response = orderController.reorder(originalOrder.getId(), reorderRequest);
         
         // 응답 검증
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        Map<String, Object> responseBody = response.getBody();
+        com.dinnervery.backend.dto.order.OrderResponse responseBody = response.getBody();
         assertThat(responseBody).isNotNull();
         
-        // orderedItems 검증
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> orderedItems = (List<Map<String, Object>>) responseBody.get("orderedItems");
-        assertThat(orderedItems).hasSize(2);
+        // orderItems 검증
+        List<com.dinnervery.backend.dto.order.OrderItemResponse> orderItems = responseBody.getOrderItems();
+        assertThat(orderItems).hasSize(2);
         
         // 첫 번째 주문 항목 검증 (발렌타인 디너)
-        Map<String, Object> firstItem = orderedItems.stream()
-                .filter(item -> item.get("menuId").equals(menu1.getId()))
+        com.dinnervery.backend.dto.order.OrderItemResponse firstItem = orderItems.stream()
+                .filter(item -> item.getMenuId().equals(menu1.getId()))
                 .findFirst()
                 .orElseThrow();
-        assertThat(firstItem.get("menuId")).isEqualTo(menu1.getId());
-        assertThat(firstItem.get("quantity")).isEqualTo(2);
-        assertThat(firstItem.get("servingStyleId")).isEqualTo(servingStyle.getId());
+        assertThat(firstItem.getMenuId()).isEqualTo(menu1.getId());
+        assertThat(firstItem.getQuantity()).isEqualTo(2);
+        assertThat(firstItem.getServingStyle().getStyleId()).isEqualTo(servingStyle.getId());
         
         // 두 번째 주문 항목 검증 (잉글리시 디너)
-        Map<String, Object> secondItem = orderedItems.stream()
-                .filter(item -> item.get("menuId").equals(menu2.getId()))
+        com.dinnervery.backend.dto.order.OrderItemResponse secondItem = orderItems.stream()
+                .filter(item -> item.getMenuId().equals(menu2.getId()))
                 .findFirst()
                 .orElseThrow();
-        assertThat(secondItem.get("menuId")).isEqualTo(menu2.getId());
-        assertThat(secondItem.get("quantity")).isEqualTo(1);
-        assertThat(secondItem.get("servingStyleId")).isEqualTo(servingStyle.getId());
+        assertThat(secondItem.getMenuId()).isEqualTo(menu2.getId());
+        assertThat(secondItem.getQuantity()).isEqualTo(1);
+        assertThat(secondItem.getServingStyle().getStyleId()).isEqualTo(servingStyle.getId());
     }
 
     @Test
     void 존재하지_않는_주문_재주문_예외_테스트() {
+        // 재주문 요청 생성
+        ReorderRequest reorderRequest = ReorderRequest.builder()
+                .customerId(customer.getId())
+                .addressId(address1.getId())
+                .cardNumber("1234-5678-9012-3456")
+                .build();
+        
         // 존재하지 않는 주문 ID로 재주문 시도
-        assertThatThrownBy(() -> orderController.reorder(999L))
+        assertThatThrownBy(() -> orderController.reorder(999L, reorderRequest))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("원본 주문을 찾을 수 없습니다");
     }

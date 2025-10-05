@@ -55,14 +55,14 @@ public class Order extends BaseEntity {
     @Column(name = "canceled_at")
     private LocalDateTime canceledAt;
 
-    @Column(name = "total_amount", nullable = false)
-    private int totalAmount;
+    @Column(name = "total_price", nullable = false)
+    private int totalPrice;
 
     @Column(name = "discount_amount")
     private Integer discountAmount;
 
-    @Column(name = "final_amount")
-    private int finalAmount;
+    @Column(name = "final_price")
+    private int finalPrice;
 
     @Column(name = "card_number", nullable = false, length = 100)
     private String cardNumber;
@@ -75,32 +75,32 @@ public class Order extends BaseEntity {
         this.deliveryTime = deliveryTime;
         this.orderDate = LocalDateTime.now();
         this.requestedAt = LocalDateTime.now();
-        this.totalAmount = 0;
-        this.finalAmount = 0;
+        this.totalPrice = 0;
+        this.finalPrice = 0;
     }
 
     public void addOrderItem(OrderItem orderItem) {
         this.orderItems.add(orderItem);
         orderItem.setOrder(this);
-        calculateTotalAmount();
+        calculateTotalPrice();
     }
 
     public void removeOrderItem(OrderItem orderItem) {
         this.orderItems.remove(orderItem);
         orderItem.setOrder(null);
-        calculateTotalAmount();
+        calculateTotalPrice();
     }
 
-    public void calculateTotalAmount() {
-        this.totalAmount = this.orderItems.stream()
+    public void calculateTotalPrice() {
+        this.totalPrice = this.orderItems.stream()
                 .mapToInt(OrderItem::getItemTotalPrice)
                 .sum();
-        this.finalAmount = this.totalAmount - this.discountAmount;
+        this.finalPrice = this.totalPrice - (this.discountAmount != null ? this.discountAmount : 0);
     }
 
     public void setDiscountAmount(int discountAmount) {
         this.discountAmount = discountAmount;
-        this.finalAmount = this.totalAmount - this.discountAmount;
+        this.finalPrice = this.totalPrice - this.discountAmount;
     }
 
     // 배달 상태 변경 메서드들

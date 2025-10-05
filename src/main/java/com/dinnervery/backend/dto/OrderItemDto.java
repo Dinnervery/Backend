@@ -20,7 +20,7 @@ public class OrderItemDto {
     
     @NotNull(message = "주문 수량은 필수입니다")
     @Min(value = 1, message = "주문 수량은 1 이상이어야 합니다")
-    private Integer orderedQty;
+    private Integer quantity;
     
     private int itemPrice;
     private int itemTotalPrice;
@@ -30,7 +30,7 @@ public class OrderItemDto {
                 .id(orderItem.getId())
                 .menuId(orderItem.getMenu().getId())
                 .menuName(orderItem.getMenu().getName())
-                .orderedQty(orderItem.getOrderedQty())
+                .quantity(orderItem.getQuantity())
                 .itemPrice(orderItem.getItemPrice())
                 .itemTotalPrice(orderItem.getItemTotalPrice())
                 .build();

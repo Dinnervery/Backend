@@ -8,7 +8,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -26,9 +25,9 @@ public class OrderDto {
     @NotEmpty(message = "주문 항목은 최소 1개 이상이어야 합니다")
     private List<OrderItemDto> orderItems;
     
-    private BigDecimal totalAmount;
-    private BigDecimal discountAmount;
-    private BigDecimal finalAmount;
+    private int totalPrice;
+    private int discountAmount;
+    private int finalPrice;
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;
 
@@ -40,9 +39,9 @@ public class OrderDto {
                 .orderItems(order.getOrderItems().stream()
                         .map(OrderItemDto::from)
                         .toList())
-                .totalAmount(new BigDecimal(order.getTotalAmount()))
-                .discountAmount(new BigDecimal(order.getDiscountAmount()))
-                .finalAmount(new BigDecimal(order.getFinalAmount()))
+                .totalPrice(order.getTotalPrice())
+                .discountAmount(order.getDiscountAmount())
+                .finalPrice(order.getFinalPrice())
                 .createdAt(order.getCreatedAt())
                 .modifiedAt(order.getUpdatedAt())
                 .build();

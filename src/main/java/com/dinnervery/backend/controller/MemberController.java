@@ -53,7 +53,6 @@ public class MemberController {
                 .name(request.getName())
                 .phoneNumber(request.getPhoneNumber())
                 .address(request.getAddress())
-                .detailAddress(request.getDetailAddress())
                 .build();
 
         Customer savedCustomer = customerRepository.save(customer);
@@ -64,7 +63,6 @@ public class MemberController {
         response.put("name", savedCustomer.getName());
         response.put("phoneNumber", savedCustomer.getPhoneNumber());
         response.put("address", savedCustomer.getAddress());
-        response.put("detailAddress", savedCustomer.getDetailAddress());
         response.put("grade", savedCustomer.getGrade());
 
         return ResponseEntity.ok(response);

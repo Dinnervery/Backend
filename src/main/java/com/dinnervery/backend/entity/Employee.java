@@ -29,6 +29,10 @@ public class Employee extends BaseEntity {
     @Column(name = "task", nullable = false)
     private EmployeeTask task;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "work_status", nullable = false)
+    private WorkStatus workStatus = WorkStatus.AVAILABLE;
+
     @Builder
     public Employee(String loginId, String password, String name, String phoneNumber, EmployeeTask task) {
         this.loginId = loginId;
@@ -46,7 +50,23 @@ public class Employee extends BaseEntity {
         return this.task == EmployeeTask.DELIVERY;
     }
 
+    public void startWork() {
+        this.workStatus = WorkStatus.BUSY;
+    }
+
+    public void finishWork() {
+        this.workStatus = WorkStatus.AVAILABLE;
+    }
+
+    public boolean isAvailable() {
+        return this.workStatus == WorkStatus.AVAILABLE;
+    }
+
     public enum EmployeeTask {
         COOK, DELIVERY
+    }
+
+    public enum WorkStatus {
+        AVAILABLE, BUSY
     }
 }

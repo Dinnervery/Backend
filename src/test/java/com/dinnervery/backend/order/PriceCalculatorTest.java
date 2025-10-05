@@ -1,14 +1,11 @@
 package com.dinnervery.backend.order;
 
-import com.dinnervery.backend.dto.order.OrderCreateRequest;
-import com.dinnervery.backend.dto.order.OrderItemOptionRequest;
-import com.dinnervery.backend.dto.order.OrderItemRequest;
+import com.dinnervery.backend.dto.request.OrderCreateRequest;
+import com.dinnervery.backend.dto.request.OrderItemCreateRequest;
 import com.dinnervery.backend.entity.Customer;
-import com.dinnervery.backend.repository.CustomerRepository;
-import com.dinnervery.backend.repository.MenuOptionRepository;
 import com.dinnervery.backend.entity.Menu;
-import com.dinnervery.backend.entity.MenuOption;
 import com.dinnervery.backend.entity.ServingStyle;
+import com.dinnervery.backend.repository.CustomerRepository;
 import com.dinnervery.backend.repository.MenuRepository;
 import com.dinnervery.backend.repository.ServingStyleRepository;
 import com.dinnervery.backend.service.PriceCalculator;
@@ -33,9 +30,6 @@ class PriceCalculatorTest {
     private MenuRepository menuRepository;
 
     @Mock
-    private MenuOptionRepository menuOptionRepository;
-
-    @Mock
     private ServingStyleRepository servingStyleRepository;
 
     @Mock
@@ -45,8 +39,6 @@ class PriceCalculatorTest {
     private PriceCalculator priceCalculator;
 
     private Menu champagneMenu;
-    private MenuOption champagneOption;
-    private ServingStyle simpleStyle;
     private ServingStyle grandStyle;
     private ServingStyle deluxeStyle;
     private Customer customer;
@@ -60,20 +52,7 @@ class PriceCalculatorTest {
                 .description("프리미엄 샴페인과 함께하는 축제 디너")
                 .build();
 
-        // 샴페인 옵션 설정 (기본 2병)
-        champagneOption = MenuOption.builder()
-                .menu(champagneMenu)
-                .itemName("샴페인")
-                .itemPrice(25000)
-                .defaultQty(2) // 기본 2병
-                .build();
-
         // 서빙 스타일 설정
-        simpleStyle = ServingStyle.builder()
-                .name("SIMPLE")
-                .extraPrice(0)
-                .build();
-
         grandStyle = ServingStyle.builder()
                 .name("GRAND")
                 .extraPrice(5000)
@@ -97,17 +76,16 @@ class PriceCalculatorTest {
     @Test
     void 샴페인_디너_GRAND_스타일_추가요금_반영() {
         // Given
-        OrderItemRequest itemRequest = OrderItemRequest.builder()
+        OrderItemCreateRequest itemRequest = OrderItemCreateRequest.builder()
                 .menuId(1L)
                 .servingStyleId(2L) // GRAND 스타일
-                .orderedQty(1)
-                .options(List.of())
+                .quantity(1)
                 .build();
 
         OrderCreateRequest request = OrderCreateRequest.builder()
                 .customerId(1L)
                 .addressId(1L)
-                .items(List.of(itemRequest))
+                .orderItems(List.of(itemRequest))
                 .build();
 
         when(menuRepository.findById(1L)).thenReturn(Optional.of(champagneMenu));
@@ -125,17 +103,16 @@ class PriceCalculatorTest {
     @Test
     void 샴페인_디너_DELUXE_스타일_추가요금_반영() {
         // Given
-        OrderItemRequest itemRequest = OrderItemRequest.builder()
+        OrderItemCreateRequest itemRequest = OrderItemCreateRequest.builder()
                 .menuId(1L)
                 .servingStyleId(3L) // DELUXE 스타일
-                .orderedQty(1)
-                .options(List.of())
+                .quantity(1)
                 .build();
 
         OrderCreateRequest request = OrderCreateRequest.builder()
                 .customerId(1L)
                 .addressId(1L)
-                .items(List.of(itemRequest))
+                .orderItems(List.of(itemRequest))
                 .build();
 
         when(menuRepository.findById(1L)).thenReturn(Optional.of(champagneMenu));
@@ -148,39 +125,5 @@ class PriceCalculatorTest {
         // Then
         // 샴페인 축제 디너 기본 가격 90,000 + DELUXE 스타일 추가비 10,000 = 100,000원
         assertThat(totalPrice).isEqualTo(100000);
-    }
-
-    @Test
-    void 샴페인_디너_샴페인_3병_주문시_옵션_델타_계산() {
-        // Given
-        OrderItemOptionRequest optionRequest = OrderItemOptionRequest.builder()
-                .menuOptionId(1L)
-                .orderedQty(3) // 기본 2병에서 3병으로 설정 (1병 추가)
-                .build();
-
-        OrderItemRequest itemRequest = OrderItemRequest.builder()
-                .menuId(1L)
-                .servingStyleId(1L)
-                .orderedQty(1)
-                .options(List.of(optionRequest))
-                .build();
-
-        OrderCreateRequest request = OrderCreateRequest.builder()
-                .customerId(1L)
-                .addressId(1L)
-                .items(List.of(itemRequest))
-                .build();
-
-        when(menuRepository.findById(1L)).thenReturn(Optional.of(champagneMenu));
-        when(servingStyleRepository.findById(1L)).thenReturn(Optional.of(simpleStyle));
-        when(menuOptionRepository.findById(1L)).thenReturn(Optional.of(champagneOption));
-        when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
-
-        // When
-        int totalPrice = priceCalculator.calcOrderTotal(request);
-
-        // Then
-        // 기본 가격 90,000 + 샴페인 추가 1병(25,000) = 115,000원
-        assertThat(totalPrice).isEqualTo(115000);
     }
 }

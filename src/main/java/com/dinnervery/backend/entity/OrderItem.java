@@ -29,8 +29,8 @@ public class OrderItem extends BaseEntity {
     @JoinColumn(name = "serving_style_id", nullable = false)
     private ServingStyle servingStyle;
 
-    @Column(name = "ordered_qty", nullable = false)
-    private Integer orderedQty;
+    @Column(name = "quantity", nullable = false)
+    private Integer quantity;
 
     @Column(name = "item_price", nullable = false)
     private int itemPrice;
@@ -42,10 +42,10 @@ public class OrderItem extends BaseEntity {
     private List<OrderItemOption> orderItemOptions = new ArrayList<>();
 
     @Builder
-    public OrderItem(Menu menu, ServingStyle servingStyle, Integer orderedQty) {
+    public OrderItem(Menu menu, ServingStyle servingStyle, Integer quantity) {
         this.menu = menu;
         this.servingStyle = servingStyle;
-        this.orderedQty = orderedQty;
+        this.quantity = quantity;
         calculateItemPrice();
     }
 
@@ -63,16 +63,16 @@ public class OrderItem extends BaseEntity {
             .sum();
         
         this.itemPrice = basePrice + optionCost;
-        this.itemTotalPrice = this.itemPrice * orderedQty;
+        this.itemTotalPrice = this.itemPrice * quantity;
         
         // Order의 총 금액도 업데이트
         if (this.order != null) {
-            this.order.calculateTotalAmount();
+            this.order.calculateTotalPrice();
         }
     }
 
-    public void updateOrderedQty(Integer newQty) {
-        this.orderedQty = newQty;
+    public void updateQuantity(Integer newQty) {
+        this.quantity = newQty;
         calculateItemPrice();
     }
 
