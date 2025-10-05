@@ -11,10 +11,12 @@ import com.dinnervery.backend.entity.Employee;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "spring.profiles.active", havingValue = "prod", matchIfMissing = false)
 public class DataLoader implements CommandLineRunner {
 
     private final ServingStyleRepository servingStyleRepository;

@@ -13,12 +13,19 @@ import com.dinnervery.backend.repository.CustomerRepository;
 import com.dinnervery.backend.repository.OrderRepository;
 import com.dinnervery.backend.repository.ServingStyleRepository;
 import com.dinnervery.backend.repository.MenuRepository;
+import com.dinnervery.backend.repository.MenuOptionRepository;
+import com.dinnervery.backend.repository.CartRepository;
+import com.dinnervery.backend.repository.CartItemRepository;
+import com.dinnervery.backend.repository.OrderItemRepository;
+import com.dinnervery.backend.repository.OrderItemOptionRepository;
+import com.dinnervery.backend.repository.EmployeeRepository;
 import com.dinnervery.backend.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class CustomerGradeUpdateTest {
 
     @Autowired
@@ -61,11 +69,38 @@ class CustomerGradeUpdateTest {
     @Autowired
     private ServingStyleRepository servingStyleRepository;
 
+    @Autowired
+    private MenuOptionRepository menuOptionRepository;
+
+    @Autowired
+    private CartRepository cartRepository;
+
+    @Autowired
+    private CartItemRepository cartItemRepository;
+
+    @Autowired
+    private OrderItemRepository orderItemRepository;
+
+    @Autowired
+    private OrderItemOptionRepository orderItemOptionRepository;
+
+    @Autowired
+    private EmployeeRepository employeeRepository;
+
     @BeforeEach
     void setUp() {
-        // DB 초기화
+        // 모든 테이블 초기화 (외래키 순서 고려)
+        orderItemOptionRepository.deleteAll();
+        orderItemRepository.deleteAll();
+        orderRepository.deleteAll();
+        cartItemRepository.deleteAll();
+        cartRepository.deleteAll();
         addressRepository.deleteAll();
         customerRepository.deleteAll();
+        menuOptionRepository.deleteAll();
+        menuRepository.deleteAll();
+        servingStyleRepository.deleteAll();
+        employeeRepository.deleteAll();
         
         // 고객 생성
         customer = Customer.builder()
