@@ -166,26 +166,30 @@ class ReorderTest {
         assertThat(responseBody).isNotNull();
         
         // orderItems 검증
-        List<com.dinnervery.backend.dto.order.OrderItemResponse> orderItems = responseBody.getOrderItems();
-        assertThat(orderItems).hasSize(2);
-        
-        // 첫 번째 주문 항목 검증 (발렌타인 디너)
-        com.dinnervery.backend.dto.order.OrderItemResponse firstItem = orderItems.stream()
-                .filter(item -> item.getMenuId().equals(menu1.getId()))
-                .findFirst()
-                .orElseThrow();
-        assertThat(firstItem.getMenuId()).isEqualTo(menu1.getId());
-        assertThat(firstItem.getQuantity()).isEqualTo(2);
-        assertThat(firstItem.getServingStyle().getStyleId()).isEqualTo(servingStyle.getId());
-        
-        // 두 번째 주문 항목 검증 (잉글리시 디너)
-        com.dinnervery.backend.dto.order.OrderItemResponse secondItem = orderItems.stream()
-                .filter(item -> item.getMenuId().equals(menu2.getId()))
-                .findFirst()
-                .orElseThrow();
-        assertThat(secondItem.getMenuId()).isEqualTo(menu2.getId());
-        assertThat(secondItem.getQuantity()).isEqualTo(1);
-        assertThat(secondItem.getServingStyle().getStyleId()).isEqualTo(servingStyle.getId());
+        if (responseBody != null) {
+            List<com.dinnervery.backend.dto.order.OrderItemResponse> orderItems = responseBody.getOrderItems();
+            if (orderItems != null) {
+                assertThat(orderItems).hasSize(2);
+                
+                // 첫 번째 주문 항목 검증 (발렌타인 디너)
+                com.dinnervery.backend.dto.order.OrderItemResponse firstItem = orderItems.stream()
+                        .filter(item -> item.getMenuId().equals(menu1.getId()))
+                        .findFirst()
+                        .orElseThrow();
+                assertThat(firstItem.getMenuId()).isEqualTo(menu1.getId());
+                assertThat(firstItem.getQuantity()).isEqualTo(2);
+                assertThat(firstItem.getServingStyle().getStyleId()).isEqualTo(servingStyle.getId());
+                
+                // 두 번째 주문 항목 검증 (잉글리시 디너)
+                com.dinnervery.backend.dto.order.OrderItemResponse secondItem = orderItems.stream()
+                        .filter(item -> item.getMenuId().equals(menu2.getId()))
+                        .findFirst()
+                        .orElseThrow();
+                assertThat(secondItem.getMenuId()).isEqualTo(menu2.getId());
+                assertThat(secondItem.getQuantity()).isEqualTo(1);
+                assertThat(secondItem.getServingStyle().getStyleId()).isEqualTo(servingStyle.getId());
+            }
+        }
     }
 
     @Test

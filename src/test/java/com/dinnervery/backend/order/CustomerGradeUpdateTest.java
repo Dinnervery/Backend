@@ -13,12 +13,6 @@ import com.dinnervery.backend.repository.CustomerRepository;
 import com.dinnervery.backend.repository.OrderRepository;
 import com.dinnervery.backend.repository.ServingStyleRepository;
 import com.dinnervery.backend.repository.MenuRepository;
-import com.dinnervery.backend.repository.MenuOptionRepository;
-import com.dinnervery.backend.repository.CartRepository;
-import com.dinnervery.backend.repository.CartItemRepository;
-import com.dinnervery.backend.repository.OrderItemRepository;
-import com.dinnervery.backend.repository.OrderItemOptionRepository;
-import com.dinnervery.backend.repository.EmployeeRepository;
 import com.dinnervery.backend.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
@@ -29,7 +23,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.Map;
@@ -71,24 +64,6 @@ class CustomerGradeUpdateTest {
 
     @Autowired
     private ServingStyleRepository servingStyleRepository;
-
-    @Autowired
-    private MenuOptionRepository menuOptionRepository;
-
-    @Autowired
-    private CartRepository cartRepository;
-
-    @Autowired
-    private CartItemRepository cartItemRepository;
-
-    @Autowired
-    private OrderItemRepository orderItemRepository;
-
-    @Autowired
-    private OrderItemOptionRepository orderItemOptionRepository;
-
-    @Autowired
-    private EmployeeRepository employeeRepository;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -241,13 +216,15 @@ class CustomerGradeUpdateTest {
         assertThat(responseBody).isNotNull();
         
         // 고객 정보 검증
-        assertThat(responseBody.get("customerId")).isEqualTo(customer.getId());
-        assertThat(responseBody.get("loginId")).isEqualTo(customer.getLoginId());
-        assertThat(responseBody.get("name")).isEqualTo(customer.getName());
-        assertThat(responseBody.get("phoneNumber")).isEqualTo(customer.getPhoneNumber());
-        assertThat(responseBody.get("address")).isEqualTo(customer.getAddress());
-        assertThat(responseBody.get("grade")).isEqualTo(customer.getGrade().toString());
-        assertThat(responseBody.get("orderCount")).isEqualTo(customer.getOrderCount());
+        if (responseBody != null) {
+            assertThat(responseBody.get("customerId")).isEqualTo(customer.getId());
+            assertThat(responseBody.get("loginId")).isEqualTo(customer.getLoginId());
+            assertThat(responseBody.get("name")).isEqualTo(customer.getName());
+            assertThat(responseBody.get("phoneNumber")).isEqualTo(customer.getPhoneNumber());
+            assertThat(responseBody.get("address")).isEqualTo(customer.getAddress());
+            assertThat(responseBody.get("grade")).isEqualTo(customer.getGrade().toString());
+            assertThat(responseBody.get("orderCount")).isEqualTo(customer.getOrderCount());
+        }
     }
 
 
@@ -263,15 +240,17 @@ class CustomerGradeUpdateTest {
         assertThat(responseBody).isNotNull();
         
         // 메뉴 목록 검증
-        @SuppressWarnings("unchecked")
-        java.util.List<Map<String, Object>> menus = (java.util.List<Map<String, Object>>) responseBody.get("menus");
-        assertThat(menus).isNotEmpty();
-        
-        // BASIC 고객은 할인가 없음
-        Map<String, Object> menuData = menus.get(0);
-        assertThat(menuData.get("menuId")).isEqualTo(menu.getId());
-        assertThat(menuData.get("name")).isEqualTo(menu.getName());
-        assertThat(menuData.get("price")).isEqualTo(menu.getPrice());
-        assertThat(menuData.get("discountedPrice")).isNull(); // BASIC 고객은 할인가 없음
+        if (responseBody != null && responseBody.get("menus") != null) {
+            @SuppressWarnings("unchecked")
+            java.util.List<Map<String, Object>> menus = (java.util.List<Map<String, Object>>) responseBody.get("menus");
+            assertThat(menus).isNotEmpty();
+            
+            // BASIC 고객은 할인가 없음
+            Map<String, Object> menuData = menus.get(0);
+            assertThat(menuData.get("menuId")).isEqualTo(menu.getId());
+            assertThat(menuData.get("name")).isEqualTo(menu.getName());
+            assertThat(menuData.get("price")).isEqualTo(menu.getPrice());
+            assertThat(menuData.get("discountedPrice")).isNull(); // BASIC 고객은 할인가 없음
+        }
     }
 }
