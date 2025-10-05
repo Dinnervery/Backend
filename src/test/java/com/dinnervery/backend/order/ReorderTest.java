@@ -22,7 +22,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
@@ -70,8 +69,10 @@ class ReorderTest {
     void setUp() {
         // SQL을 사용한 강제 테이블 정리 (외래키 제약조건 무시)
         jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY FALSE");
-        jdbcTemplate.execute("TRUNCATE TABLE addresses");
+        jdbcTemplate.execute("TRUNCATE TABLE order_item_options");
+        jdbcTemplate.execute("TRUNCATE TABLE order_items");
         jdbcTemplate.execute("TRUNCATE TABLE orders");
+        jdbcTemplate.execute("TRUNCATE TABLE addresses");
         jdbcTemplate.execute("TRUNCATE TABLE customers");
         jdbcTemplate.execute("TRUNCATE TABLE menus");
         jdbcTemplate.execute("TRUNCATE TABLE serving_styles");
