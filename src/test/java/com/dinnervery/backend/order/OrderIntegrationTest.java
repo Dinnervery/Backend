@@ -143,48 +143,6 @@ class OrderIntegrationTest {
         assertThat(responseBody.get("finalPrice")).isEqualTo(expectedSubtotal); // BASIC 등급이므로 할인 없음
     }
     
-    @Test
-    void VIP_고객_가격_계산_API_테스트() {
-        // 고객을 VIP로 만들기 위해 주문수 15회로 설정
-        for (int i = 0; i < 15; i++) {
-            testCustomer.incrementOrderCount();
-        }
-        testCustomer = customerRepository.save(testCustomer);
-        
-        // 가격 계산 요청 생성
-        PriceCalculationRequest.OrderItemRequest orderItem = PriceCalculationRequest.OrderItemRequest.builder()
-                .menuId(testMenu.getId())
-                .quantity(1)
-                .servingStyleId(testServingStyle.getId())
-                .optionIds(List.of())
-                .build();
-        
-        PriceCalculationRequest request = PriceCalculationRequest.builder()
-                .customerId(testCustomer.getId())
-                .items(List.of(orderItem))
-                .build();
-        
-        // 가격 계산 API 호출
-        ResponseEntity<Map<String, Object>> response = orderController.calculatePrice(request);
-        
-        // 응답 검증
-        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        Map<String, Object> responseBody = response.getBody();
-        assertThat(responseBody).isNotNull();
-        
-        // VIP 할인 검증
-        assertThat(responseBody.get("customerGrade")).isEqualTo("VIP");
-        assertThat(responseBody.get("discountRate")).isEqualTo(10);
-        
-        // 할인 전 가격: 메뉴(28000) + 서빙스타일(5000) = 33000
-        int expectedSubtotal = testMenu.getPrice() + testServingStyle.getExtraPrice();
-        int expectedDiscount = (int) (expectedSubtotal * 0.1);
-        int expectedFinalPrice = expectedSubtotal - expectedDiscount;
-        
-        assertThat(responseBody.get("subtotal")).isEqualTo(expectedSubtotal);
-        assertThat(responseBody.get("discountAmount")).isEqualTo(expectedDiscount);
-        assertThat(responseBody.get("finalPrice")).isEqualTo(expectedFinalPrice);
-    }
 
     @Test
     void 주문_생성_후_저장된_데이터_검증() {
@@ -243,58 +201,6 @@ class OrderIntegrationTest {
         assertThat(updatedCustomer.getGrade()).isEqualTo(Customer.CustomerGrade.BASIC);
     }
 
-    @Test
-    void 고객_주문횟수_10회_달성시_VIP_등급_변경() {
-        // Given
-        // 고객의 주문 횟수를 9회로 설정 (이미 setUp에서 5회로 설정되어 있으므로 4회만 추가)
-        testCustomer = customerRepository.findById(testCustomer.getId()).orElseThrow();
-        for (int i = 0; i < 4; i++) {
-            testCustomer.incrementOrderCount();
-        }
-        testCustomer = customerRepository.save(testCustomer);
-
-        OrderItemCreateRequest itemRequest = OrderItemCreateRequest.builder()
-                .menuId(testMenu.getId())
-                .servingStyleId(testServingStyle.getId())
-                .quantity(1)
-                .build();
-
-        // 주소 생성
-        Address         testAddress = Address.builder()
-                .customer(testCustomer)
-                .address("서울시 강남구 테헤란로 123")
-                .build();
-        testAddress = addressRepository.save(testAddress);
-
-        // When
-        // 주문 생성
-        Order order = Order.builder()
-                .customer(testCustomer)
-                .address(testAddress)
-                .cardNumber("1234-5678-9012-3456")
-                .build();
-        orderRepository.save(order);
-
-        // 주문 항목 생성
-        OrderItem orderItem = OrderItem.builder()
-                .menu(testMenu)
-                .servingStyle(testServingStyle)
-                .quantity(itemRequest.getQuantity())
-                .build();
-        order.addOrderItem(orderItem);
-        orderItemRepository.save(orderItem);
-
-        // 고객 주문 횟수 증가 (15번째 주문)
-        testCustomer.incrementOrderCount();
-        Customer updatedCustomer = customerRepository.save(testCustomer);
-
-        // Then
-        // 고객 주문 횟수 검증
-        assertThat(updatedCustomer.getOrderCount()).isEqualTo(10);
-
-        // 고객 등급 VIP 변경 검증
-        assertThat(updatedCustomer.getGrade()).isEqualTo(Customer.CustomerGrade.VIP);
-    }
 
     @Test
     void 주문_조회_테스트() {

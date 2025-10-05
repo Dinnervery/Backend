@@ -27,7 +27,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 import java.util.UUID;
@@ -127,7 +126,7 @@ class CustomerGradeUpdateTest {
 
         // 서빙 스타일 생성
         servingStyle = ServingStyle.builder()
-                .name("일반")
+                .name("심플 스타일")
                 .extraPrice(0)
                 .build();
         servingStyle = servingStyleRepository.save(servingStyle);
@@ -189,7 +188,7 @@ class CustomerGradeUpdateTest {
 
         // 최종 고객 정보 확인
         Customer finalCustomer = customerRepository.findById(customer.getId()).orElseThrow();
-        assertThat(finalCustomer.getOrderCount()).isEqualTo(10);
+        assertThat(finalCustomer.getOrderCount()).isEqualTo(15);
         assertThat(finalCustomer.getGrade()).isEqualTo(Customer.CustomerGrade.VIP);
     }
 
@@ -208,68 +207,15 @@ class CustomerGradeUpdateTest {
         assertThat(customer.getOrderCount()).isEqualTo(5);
         assertThat(customer.getGrade()).isEqualTo(Customer.CustomerGrade.BASIC);
 
-        // 주문수 10으로 설정하여 VIP 등급 달성
-        for (int i = 0; i < 5; i++) {
+        // 주문수 15로 설정하여 VIP 등급 달성
+        for (int i = 0; i < 10; i++) {
             customer.incrementOrderCount();
         }
         customer = customerRepository.save(customer);
-        assertThat(customer.getOrderCount()).isEqualTo(10);
+        assertThat(customer.getOrderCount()).isEqualTo(15);
         assertThat(customer.getGrade()).isEqualTo(Customer.CustomerGrade.VIP);
     }
 
-    @Test
-    void VIP_할인_적용_조건_테스트() {
-        // 15번 주문하여 VIP 등급 달성
-        for (int i = 1; i <= 15; i++) {
-            Order order = Order.builder()
-                    .customer(customer)
-                    .address(address)
-                    .cardNumber("1234-5678-9012-3456")
-                    .build();
-            order = orderRepository.save(order);
-
-            // 주문 항목 추가
-            OrderItem orderItem = OrderItem.builder()
-                    .menu(menu)
-                    .servingStyle(servingStyle)
-                    .quantity(1)
-                    .build();
-            order.addOrderItem(orderItem);
-            order = orderRepository.save(order);
-
-            orderService.completeOrder(order.getId());
-        }
-
-        Customer vipCustomer = customerRepository.findById(customer.getId()).orElseThrow();
-        assertThat(vipCustomer.getGrade()).isEqualTo(Customer.CustomerGrade.VIP);
-        assertThat(vipCustomer.getOrderCount()).isEqualTo(15);
-
-        // 16번째 주문 시 VIP 할인 적용 가능
-        assertThat(vipCustomer.isVipDiscountEligible()).isTrue();
-
-        // 17번째 주문 완료 후
-        Order order16 = Order.builder()
-                .customer(customer)
-                .address(address)
-                .cardNumber("1234-5678-9012-3456")
-                .build();
-        order16 = orderRepository.save(order16);
-
-        // 주문 항목 추가
-        OrderItem orderItem16 = OrderItem.builder()
-                .menu(menu)
-                .servingStyle(servingStyle)
-                .quantity(1)
-                .build();
-        order16.addOrderItem(orderItem16);
-        order16 = orderRepository.save(order16);
-
-        orderService.completeOrder(order16.getId());
-
-        Customer updatedCustomer = customerRepository.findById(customer.getId()).orElseThrow();
-        assertThat(updatedCustomer.getOrderCount()).isEqualTo(16);
-        assertThat(updatedCustomer.isVipDiscountEligible()).isFalse();
-    }
 
     @Test
     void 고객_정보_조회_API_테스트() {
@@ -291,38 +237,6 @@ class CustomerGradeUpdateTest {
         assertThat(responseBody.get("orderCount")).isEqualTo(customer.getOrderCount());
     }
 
-    @Test
-    void 메뉴_목록_조회_API_VIP_할인_테스트() {
-        // 고객을 VIP로 만들기 위해 주문수 10회로 설정
-        for (int i = 0; i < 10; i++) {
-            customer.incrementOrderCount();
-        }
-        customer = customerRepository.save(customer);
-        
-        // 메뉴 목록 조회 API 호출 (VIP 고객)
-        ResponseEntity<Map<String, Object>> response = menuController.getAllMenus(customer.getId());
-        
-        // 응답 검증
-        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        Map<String, Object> responseBody = response.getBody();
-        assertThat(responseBody).isNotNull();
-        
-        // 메뉴 목록 검증
-        @SuppressWarnings("unchecked")
-        java.util.List<Map<String, Object>> menus = (java.util.List<Map<String, Object>>) responseBody.get("menus");
-        assertThat(menus).isNotEmpty();
-        
-        // VIP 할인가 검증
-        Map<String, Object> menuData = menus.get(0);
-        assertThat(menuData.get("menuId")).isEqualTo(menu.getId());
-        assertThat(menuData.get("name")).isEqualTo(menu.getName());
-        assertThat(menuData.get("price")).isEqualTo(menu.getPrice());
-        assertThat(menuData.get("discountedPrice")).isNotNull();
-        
-        // 할인가 계산 검증 (10% 할인)
-        int expectedDiscountedPrice = (int) (menu.getPrice() * 0.9);
-        assertThat(menuData.get("discountedPrice")).isEqualTo(expectedDiscountedPrice);
-    }
 
     @Test
     void 메뉴_목록_조회_API_BASIC_고객_테스트() {

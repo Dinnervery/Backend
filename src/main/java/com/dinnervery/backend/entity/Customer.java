@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 @Entity
 @Table(name = "customers")
 @Getter
@@ -35,6 +37,9 @@ public class Customer extends BaseEntity {
     @Column(name = "grade", nullable = false)
     private CustomerGrade grade = CustomerGrade.BASIC;
 
+    @Column(name = "vip_start_date")
+    private LocalDate vipStartDate;
+
     @Builder
     public Customer(String loginId, String password, String name, String phoneNumber, String address) {
         this.loginId = loginId;
@@ -50,15 +55,39 @@ public class Customer extends BaseEntity {
     }
 
     public void updateGradeByOrderCount() {
+        // 월별 초기화 체크
+        checkMonthlyReset();
+        
         if (this.orderCount >= 15) {
             this.grade = CustomerGrade.VIP;
+            // VIP가 된 날짜 설정 (아직 설정되지 않은 경우에만)
+            if (this.vipStartDate == null) {
+                this.vipStartDate = LocalDate.now();
+            }
         } else {
             this.grade = CustomerGrade.BASIC;
+            this.vipStartDate = null;
+        }
+    }
+
+    private void checkMonthlyReset() {
+        // VIP 시작일이 있고 한 달이 지났다면 초기화
+        if (this.vipStartDate != null) {
+            LocalDate oneMonthLater = this.vipStartDate.plusMonths(1);
+            if (LocalDate.now().isAfter(oneMonthLater)) {
+                this.orderCount = 0;
+                this.grade = CustomerGrade.BASIC;
+                this.vipStartDate = null;
+            }
         }
     }
 
     public boolean isVipDiscountEligible() {
-        return this.grade == CustomerGrade.VIP && (this.orderCount + 1) % 16 == 0;
+        // 월별 초기화 체크
+        checkMonthlyReset();
+        
+        // VIP 등급이면 상시 10% 할인 적용
+        return this.grade == CustomerGrade.VIP;
     }
 
     public enum CustomerGrade {

@@ -53,7 +53,7 @@ public class PriceCalculator {
         Customer customer = customerRepository.findById(req.getCustomerId())
                 .orElseThrow(() -> new IllegalArgumentException("고객을 찾을 수 없습니다: " + req.getCustomerId()));
 
-        if (customer.getOrderCount() >= 15 && (customer.getOrderCount() + 1) % 16 == 0) {
+        if (customer.isVipDiscountEligible()) {
             total = (int) (total * 0.9);
         }
 
