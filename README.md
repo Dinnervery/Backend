@@ -1,12 +1,5 @@
 # DinnerVery Backend
 
-## 빌드 및 실행
-
-### 사전 요구사항
-
-- JDK 17 이상
-- MySQL 8.4 (운영환경)
-
 ### 로컬 실행
 
 #### Gradle을 사용한 실행
