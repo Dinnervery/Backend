@@ -7,7 +7,7 @@ plugins {
 
 group = 'com.dinnervery'
 version = '0.0.1-SNAPSHOT'
-description = 'Dinnervery BE project'
+description = 'Dinnervery project'
 
 java {
 	toolchain {
