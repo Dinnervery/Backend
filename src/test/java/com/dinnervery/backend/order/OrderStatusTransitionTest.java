@@ -160,43 +160,6 @@ class OrderStatusTransitionTest {
                 .hasMessageContaining("배달 완료는 DELIVERING 상태에서만 가능합니다");
     }
 
-    @Test
-    void 주문_취소_테스트() {
-        // REQUESTED 상태에서 취소
-        order.cancelOrder();
-        order = orderRepository.save(order);
-        assertThat(order.getDeliveryStatus()).isEqualTo(Order.status.CANCELED);
-        assertThat(order.getCanceledAt()).isNotNull();
-
-        // COOKING 상태에서 취소
-        Order order2 = Order.builder()
-                .customer(customer)
-                .address(address1)
-                .cardNumber("1234-5678-9012-3456")
-                .build();
-        order2 = orderRepository.save(order2);
-        order2.startCooking();
-        order2.cancelOrder();
-        order2 = orderRepository.save(order2);
-        assertThat(order2.getDeliveryStatus()).isEqualTo(Order.status.CANCELED);
-        assertThat(order2.getCanceledAt()).isNotNull();
-
-        // DONE 상태에서 취소 시도
-        Order order3 = Order.builder()
-                .customer(customer)
-                .address(address1)
-                .cardNumber("1234-5678-9012-3456")
-                .build();
-        order3 = orderRepository.save(order3);
-        order3.startCooking();
-        order3.completeCooking();
-        order3.completeDelivery();
-        final Order finalOrder3 = orderRepository.save(order3);
-
-        assertThatThrownBy(() -> finalOrder3.cancelOrder())
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("완료된 주문은 취소할 수 없습니다");
-    }
 
     @Test
     void 직원_권한_테스트() {

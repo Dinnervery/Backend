@@ -25,6 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -88,7 +89,6 @@ class NewApiTest {
                 .password("password")
                 .name("테스트 고객")
                 .phoneNumber("010-1234-5678")
-                .address("서울시 강남구")
                 .build();
         customer = customerRepository.save(customer);
 
@@ -236,12 +236,13 @@ class NewApiTest {
             assertThat(responseBody.get("servingStyleId")).isEqualTo(servingStyle.getId());
             assertThat(responseBody.get("servingStyleName")).isEqualTo(servingStyle.getName());
             assertThat(responseBody.get("servingStylePrice")).isEqualTo(servingStyle.getExtraPrice());
-            assertThat(responseBody.get("totalPrice")).isEqualTo(menu.getPrice() * 2);
+            assertThat(responseBody.get("totalPrice")).isEqualTo((menu.getPrice() + servingStyle.getExtraPrice()) * 2);
             assertThat(responseBody.get("addedAt")).isNotNull();
         }
     }
 
     @Test
+    @Transactional
     void 장바구니_조회_API_테스트() {
         // 먼저 장바구니에 아이템 추가
         CartAddItemRequest request = CartAddItemRequest.builder()

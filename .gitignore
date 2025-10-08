@@ -45,3 +45,73 @@ out/
 *.tmp
 .DS_Store
 Thumbs.db
+
+### Environment Variables ###
+.env
+.env.local
+.env.production
+.env.staging
+
+### Docker ###
+docker-compose.override.yml
+.dockerignore
+
+### Logs ###
+logs/
+*.log
+*.log.*
+
+### Database ###
+*.db
+*.sqlite
+*.sqlite3
+
+### IDE ###
+*.sublime-project
+*.sublime-workspace
+
+### OS ###
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+### Gradle ###
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+
+### Spring Boot ###
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### Test Reports ###
+test-results/
+coverage/
+jacoco.exec
+
+### Security ###
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+
+### Temporary Files ###
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+
+### Application Specific ###
+application-local.yml
+application-dev.yml
+application-secret.yml

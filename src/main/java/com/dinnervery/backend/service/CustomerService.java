@@ -8,9 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -34,32 +31,6 @@ public class CustomerService {
 
         Customer savedCustomer = customerRepository.save(customer);
         return CustomerDto.from(savedCustomer);
-    }
-
-    public CustomerDto getCustomerById(Long id) {
-        Customer customer = customerRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("고객을 찾을 수 없습니다: " + id));
-        return CustomerDto.from(customer);
-    }
-
-    public CustomerDto getCustomerByLoginId(String loginId) {
-        Customer customer = customerRepository.findByLoginId(loginId)
-                .orElseThrow(() -> new IllegalArgumentException("고객을 찾을 수 없습니다: " + loginId));
-        return CustomerDto.from(customer);
-    }
-
-    public List<CustomerDto> getAllCustomers() {
-        return customerRepository.findAll().stream()
-                .map(CustomerDto::from)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional
-    public void deleteCustomer(Long id) {
-        if (!customerRepository.existsById(id)) {
-            throw new IllegalArgumentException("고객을 찾을 수 없습니다: " + id);
-        }
-        customerRepository.deleteById(id);
     }
 }
 

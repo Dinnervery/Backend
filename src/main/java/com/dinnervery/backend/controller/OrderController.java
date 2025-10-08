@@ -1,7 +1,6 @@
 package com.dinnervery.backend.controller;
 
 import com.dinnervery.backend.dto.OrderDto;
-import com.dinnervery.backend.dto.order.OrderItemOptionRequest;
 import com.dinnervery.backend.dto.request.OrderItemCreateRequest;
 import com.dinnervery.backend.dto.order.OrderResponse;
 import com.dinnervery.backend.dto.request.OrderCreateRequest;
@@ -267,26 +266,6 @@ public class OrderController {
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/orders/{id}")
-    public ResponseEntity<Map<String, Object>> cancelOrder(@PathVariable Long id) {
-        Order order = orderRepository.findByIdWithDetails(id)
-                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다: " + id));
-        
-        if (order.getDeliveryStatus() != Order.status.REQUESTED) {
-            throw new IllegalStateException("취소 불가능한 상태입니다. 현재 상태: " + order.getDeliveryStatus());
-        }
-        
-        order.cancelOrder();
-        orderRepository.save(order);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("orderId", order.getId());
-        response.put("status", order.getDeliveryStatus());
-        response.put("cancelledAt", order.getCanceledAt());
-        response.put("refundAmount", order.getFinalPrice());
-        
-        return ResponseEntity.ok(response);
-    }
 
     // 통합된 주문 상태 변경 API
     @PatchMapping("/orders/{id}/status")

@@ -3,7 +3,6 @@ package com.dinnervery.backend.controller;
 import com.dinnervery.backend.repository.CustomerRepository;
 import com.dinnervery.backend.repository.EmployeeRepository;
 import com.dinnervery.backend.dto.member.SignupRequest;
-import com.dinnervery.backend.dto.member.EmployeeSignupRequest;
 import com.dinnervery.backend.dto.member.LoginRequest;
 import com.dinnervery.backend.entity.Customer;
 import com.dinnervery.backend.entity.Employee;
@@ -52,7 +51,6 @@ public class MemberController {
                 .password(request.getPassword())
                 .name(request.getName())
                 .phoneNumber(request.getPhoneNumber())
-                .address(request.getAddress())
                 .build();
 
         Customer savedCustomer = customerRepository.save(customer);
@@ -62,39 +60,11 @@ public class MemberController {
         response.put("loginId", savedCustomer.getLoginId());
         response.put("name", savedCustomer.getName());
         response.put("phoneNumber", savedCustomer.getPhoneNumber());
-        response.put("address", savedCustomer.getAddress());
         response.put("grade", savedCustomer.getGrade());
 
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/auth/employee/signup")
-    public ResponseEntity<Map<String, Object>> employeeSignup(@RequestBody EmployeeSignupRequest request) {
-        // 중복 검증
-        if (employeeRepository.existsByLoginId(request.getLoginId())) {
-            throw new IllegalArgumentException("이미 존재하는 로그인 ID입니다: " + request.getLoginId());
-        }
-
-        // 직원 생성
-        Employee employee = Employee.builder()
-                .loginId(request.getLoginId())
-                .password(request.getPassword())
-                .name(request.getName())
-                .phoneNumber(request.getPhoneNumber())
-                .task(request.getTask())
-                .build();
-
-        Employee savedEmployee = employeeRepository.save(employee);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("employeeId", savedEmployee.getId());
-        response.put("loginId", savedEmployee.getLoginId());
-        response.put("name", savedEmployee.getName());
-        response.put("phoneNumber", savedEmployee.getPhoneNumber());
-        response.put("task", savedEmployee.getTask());
-
-        return ResponseEntity.ok(response);
-    }
 
     @PostMapping("/auth/customer/login")
     public ResponseEntity<Map<String, Object>> customerLogin(@RequestBody LoginRequest request) {
@@ -145,7 +115,6 @@ public class MemberController {
         response.put("loginId", customer.getLoginId());
         response.put("name", customer.getName());
         response.put("phoneNumber", customer.getPhoneNumber());
-        response.put("address", customer.getAddress());
         response.put("grade", customer.getGrade());
         response.put("orderCount", customer.getOrderCount());
 

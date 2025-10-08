@@ -124,13 +124,6 @@ public class OrderService {
         return OrderDto.from(completedOrder);
     }
 
-    @Transactional
-    public void cancelOrder(Long orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다: " + orderId));
-        
-        orderRepository.delete(order);
-    }
 
     @Transactional
     public OrderDto reorder(Long originalOrderId, ReorderRequest request) {

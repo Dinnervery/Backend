@@ -27,7 +27,4 @@ public class SignupRequest {
 
     @Pattern(regexp = "^[0-9]{10,11}$", message = "올바른 전화번호 형식이 아닙니다 (10-11자리 숫자)")
     private String phoneNumber;
-
-    @NotBlank(message = "주소는 필수입니다")
-    private String address;
 }

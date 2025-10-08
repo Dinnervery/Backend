@@ -1,4 +1,4 @@
-package com.dinnervery.backend.menu;
+package com.dinnervery.backend.config;
 
 import com.dinnervery.backend.repository.MenuOptionRepository;
 import com.dinnervery.backend.repository.MenuRepository;

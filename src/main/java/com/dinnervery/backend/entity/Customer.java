@@ -8,6 +8,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "customers")
@@ -27,8 +29,8 @@ public class Customer extends BaseEntity {
     @Column(name = "phone_number", nullable = false)
     private String phoneNumber;
 
-    @Column(name = "address", nullable = false)
-    private String address;
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Address> addresses = new ArrayList<>();
 
     @Column(name = "order_count", nullable = false)
     private Integer orderCount = 0;
@@ -41,12 +43,11 @@ public class Customer extends BaseEntity {
     private LocalDate vipStartDate;
 
     @Builder
-    public Customer(String loginId, String password, String name, String phoneNumber, String address) {
+    public Customer(String loginId, String password, String name, String phoneNumber) {
         this.loginId = loginId;
         this.password = password;
         this.name = name;
         this.phoneNumber = phoneNumber;
-        this.address = address;
     }
 
     public void incrementOrderCount() {

@@ -52,8 +52,6 @@ public class Order extends BaseEntity {
     @Column(name = "done_at")
     private LocalDateTime doneAt;
 
-    @Column(name = "canceled_at")
-    private LocalDateTime canceledAt;
 
     @Column(name = "total_price", nullable = false)
     private int totalPrice;
@@ -135,30 +133,19 @@ public class Order extends BaseEntity {
         this.doneAt = LocalDateTime.now();
     }
 
-    public void cancelOrder() {
-        if (this.deliveryStatus == status.DONE) {
-            throw new IllegalStateException("완료된 주문은 취소할 수 없습니다.");
-        }
-        this.deliveryStatus = status.CANCELED;
-        this.canceledAt = LocalDateTime.now();
-    }
 
     // 배송 희망 시간 반환
     public LocalTime getDeliveryTime() {
         return this.deliveryTime;
     }
 
-    public LocalDateTime getCanceledAt() {
-        return this.canceledAt;
-    }
 
     public enum status {
         REQUESTED,  // 주문 요청
         COOKING,    // 조리 중
         COOKED,     // 조리 완료
         DELIVERING, // 배달 중
-        DONE,       // 배달 완료
-        CANCELED    // 주문 취소
+        DONE        // 배달 완료
     }
 }
 

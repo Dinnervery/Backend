@@ -221,7 +221,6 @@ class CustomerGradeUpdateTest {
             assertThat(responseBody.get("loginId")).isEqualTo(customer.getLoginId());
             assertThat(responseBody.get("name")).isEqualTo(customer.getName());
             assertThat(responseBody.get("phoneNumber")).isEqualTo(customer.getPhoneNumber());
-            assertThat(responseBody.get("address")).isEqualTo(customer.getAddress());
             assertThat(responseBody.get("grade")).isEqualTo(customer.getGrade().toString());
             assertThat(responseBody.get("orderCount")).isEqualTo(customer.getOrderCount());
         }

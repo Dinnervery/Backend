@@ -77,7 +77,7 @@ public class CartController {
         response.put("servingStyleId", cartItem.getServingStyle().getId());
         response.put("servingStyleName", cartItem.getServingStyle().getName());
         response.put("servingStylePrice", cartItem.getServingStyle().getExtraPrice());
-        response.put("totalPrice", cartItem.getMenu().getPrice() * cartItem.getQuantity());
+        response.put("totalPrice", (cartItem.getMenu().getPrice() + cartItem.getServingStyle().getExtraPrice()) * cartItem.getQuantity());
         response.put("addedAt", cartItem.getCreatedAt());
 
         return ResponseEntity.ok(response);
