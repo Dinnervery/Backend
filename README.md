@@ -1,4 +1,4 @@
-# DinnerVery
+# DinnerVery Backend
 
 ### 로컬 실행
 
