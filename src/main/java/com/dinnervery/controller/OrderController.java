@@ -6,6 +6,10 @@ import com.dinnervery.dto.order.OrderResponse;
 import com.dinnervery.dto.request.OrderCreateRequest;
 import com.dinnervery.dto.request.PriceCalculationRequest;
 import com.dinnervery.dto.request.ReorderRequest;
+import com.dinnervery.dto.response.PriceCalculationResponse;
+import com.dinnervery.dto.response.OrderListResponse;
+import com.dinnervery.dto.response.OrderStatusResponse;
+import com.dinnervery.dto.response.OrderUpdateResponse;
 import com.dinnervery.entity.Address;
 import com.dinnervery.entity.Customer;
 import com.dinnervery.repository.AddressRepository;
@@ -22,7 +26,6 @@ import com.dinnervery.entity.OrderItemOption;
 import com.dinnervery.repository.OrderItemRepository;
 import com.dinnervery.repository.OrderRepository;
 import com.dinnervery.service.OrderService;
-import com.dinnervery.service.PriceCalculator;
 import com.dinnervery.service.EmployeeAvailabilityService;
 
 import jakarta.validation.Valid;
@@ -51,12 +54,11 @@ public class OrderController {
     private final MenuRepository menuRepository;
     private final ServingStyleRepository servingStyleRepository;
     private final MenuOptionRepository menuOptionRepository;
-    private final PriceCalculator priceCalculator;
     private final EmployeeAvailabilityService employeeAvailabilityService;
 
     // 가격계산 API
     @PostMapping("/orders/calculate-price")
-    public ResponseEntity<Map<String, Object>> calculatePrice(@RequestBody PriceCalculationRequest request) {
+    public ResponseEntity<PriceCalculationResponse> calculatePrice(@RequestBody PriceCalculationRequest request) {
         // 고객 조회
         Customer customer = customerRepository.findById(request.getCustomerId())
                 .orElseThrow(() -> new IllegalArgumentException("고객을 찾을 수 없습니다: " + request.getCustomerId()));
@@ -93,84 +95,77 @@ public class OrderController {
             finalPrice = subtotal - discountAmount;
         }
         
-        Map<String, Object> response = new HashMap<>();
-        response.put("subtotal", subtotal);
-        response.put("discountAmount", discountAmount > 0 ? discountAmount : null);
-        response.put("finalPrice", finalPrice);
-        response.put("customerGrade", customer.getGrade().toString());
-        response.put("discountRate", discountRate);
+        PriceCalculationResponse response = new PriceCalculationResponse(
+                subtotal,
+                discountAmount > 0 ? discountAmount : null,
+                finalPrice,
+                customer.getGrade().toString(),
+                discountRate
+        );
         
         return ResponseEntity.ok(response);
     }
 
-    // 조리 대기목록 조회 (조리직원용)
+    // 조리 대기목록 조회 (요리직원용)
     @GetMapping("/orders/cooking")
-    public ResponseEntity<Map<String, Object>> getCookingOrders() {
-        List<Order> orders = orderRepository.findByDeliveryStatusIn(List.of(Order.status.REQUESTED, Order.status.COOKING));
+    public ResponseEntity<OrderListResponse> getCookingOrders() {
+        List<Order> orders = orderRepository.findByDeliveryStatusIn(List.of(Order.Status.REQUESTED, Order.Status.COOKING));
         
-        List<Map<String, Object>> orderList = orders.stream()
+        List<OrderListResponse.OrderSummary> orderList = orders.stream()
                 .map(order -> {
-                    Map<String, Object> orderMap = new HashMap<>();
-                    orderMap.put("orderId", order.getId());
-                    orderMap.put("status", order.getDeliveryStatus().toString());
-                    orderMap.put("deliveryTime", order.getDeliveryTime().toString());
-                    
-                    List<Map<String, Object>> orderedItems = order.getOrderItems().stream()
-                            .map(orderItem -> {
-                                Map<String, Object> item = new HashMap<>();
-                                item.put("menuId", orderItem.getMenu().getId());
-                                item.put("name", orderItem.getMenu().getName());
-                                item.put("quantity", orderItem.getQuantity());
-                                item.put("styleId", orderItem.getServingStyle().getId());
-                                item.put("styleName", orderItem.getServingStyle().getName());
-                                item.put("options", List.of()); // 현재는 빈 리스트
-                                return item;
-                            })
+                    List<OrderListResponse.OrderSummary.OrderedItem> orderedItems = order.getOrderItems().stream()
+                            .map(orderItem -> new OrderListResponse.OrderSummary.OrderedItem(
+                                    orderItem.getMenu().getId(),
+                                    orderItem.getMenu().getName(),
+                                    orderItem.getQuantity(),
+                                    orderItem.getServingStyle().getId(),
+                                    orderItem.getServingStyle().getName(),
+                                    List.of() // 현재는 빈 리스트
+                            ))
                             .collect(Collectors.toList());
                     
-                    orderMap.put("orderedItems", orderedItems);
-                    return orderMap;
+                    return new OrderListResponse.OrderSummary(
+                            order.getId(),
+                            order.getDeliveryStatus().toString(),
+                            order.getDeliveryTime().toString(),
+                            orderedItems
+                    );
                 })
                 .collect(Collectors.toList());
         
-        Map<String, Object> response = new HashMap<>();
-        response.put("orders", orderList);
+        OrderListResponse response = new OrderListResponse(orderList);
         
         return ResponseEntity.ok(response);
     }
     
     // 배달 대기목록 조회 (배달직원용)
     @GetMapping("/orders/delivery")
-    public ResponseEntity<Map<String, Object>> getDeliveryOrders() {
-        List<Order> orders = orderRepository.findByDeliveryStatusIn(List.of(Order.status.COOKED, Order.status.DELIVERING));
+    public ResponseEntity<OrderListResponse> getDeliveryOrders() {
+        List<Order> orders = orderRepository.findByDeliveryStatusIn(List.of(Order.Status.COOKED, Order.Status.DELIVERING));
         
-        List<Map<String, Object>> orderList = orders.stream()
+        List<OrderListResponse.OrderSummary> orderList = orders.stream()
                 .map(order -> {
-                    Map<String, Object> orderMap = new HashMap<>();
-                    orderMap.put("orderId", order.getId());
-                    orderMap.put("status", order.getDeliveryStatus().toString());
-                    orderMap.put("deliveryTime", order.getDeliveryTime().toString());
-                    
-                    List<Map<String, Object>> orderedItems = order.getOrderItems().stream()
-                            .map(orderItem -> {
-                                Map<String, Object> item = new HashMap<>();
-                                item.put("menuId", orderItem.getMenu().getId());
-                                item.put("name", orderItem.getMenu().getName());
-                                item.put("quantity", orderItem.getQuantity());
-                                item.put("styleId", orderItem.getServingStyle().getId());
-                                item.put("styleName", orderItem.getServingStyle().getName());
-                                item.put("options", List.of()); // 현재는 빈 리스트
-                                return item;
-                            })
+                    List<OrderListResponse.OrderSummary.OrderedItem> orderedItems = order.getOrderItems().stream()
+                            .map(orderItem -> new OrderListResponse.OrderSummary.OrderedItem(
+                                    orderItem.getMenu().getId(),
+                                    orderItem.getMenu().getName(),
+                                    orderItem.getQuantity(),
+                                    orderItem.getServingStyle().getId(),
+                                    orderItem.getServingStyle().getName(),
+                                    List.of() // 현재는 빈 리스트
+                            ))
                             .collect(Collectors.toList());
                     
-                    orderMap.put("orderedItems", orderedItems);
-                    return orderMap;
+                    return new OrderListResponse.OrderSummary(
+                            order.getId(),
+                            order.getDeliveryStatus().toString(),
+                            order.getDeliveryTime().toString(),
+                            orderedItems
+                    );
                 })
                 .collect(Collectors.toList());
         
-        Map<String, Object> response = new HashMap<>();
-        response.put("orders", orderList);
+        OrderListResponse response = new OrderListResponse(orderList);
         
         return ResponseEntity.ok(response);
     }
@@ -178,22 +173,11 @@ public class OrderController {
     // 관리자용 주문 관리(상세 API 응답)
     @PostMapping("/orders")
     public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody OrderCreateRequest request) {
-        try {
-            OrderDto orderDto = orderService.createOrder(request);
-            Order order = orderRepository.findByIdWithDetails(orderDto.getId())
-                    .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다: " + orderDto.getId()));
-            OrderResponse response = OrderResponse.from(order);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (IllegalStateException e) {
-            if (e.getMessage().contains("마감되었습니다")) {
-                return ResponseEntity.status(HttpStatus.GONE).body(null); // 410 에러
-            } else if (e.getMessage().contains("영업시간이 아닙니다")) {
-                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(null); // 503 에러
-            }
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
-        }
+        OrderDto orderDto = orderService.createOrder(request);
+        Order order = orderRepository.findByIdWithDetails(orderDto.getId())
+                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다: " + orderDto.getId()));
+        OrderResponse response = OrderResponse.from(order);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/orders/{id}")
@@ -210,7 +194,7 @@ public class OrderController {
         
         // DONE 상태가 아닌 주문만 필터링
         List<Order> activeOrders = orders.stream()
-                .filter(order -> order.getDeliveryStatus() != Order.status.DONE)
+                .filter(order -> order.getDeliveryStatus() != Order.Status.DONE)
                 .collect(Collectors.toList());
         
         List<Map<String, Object>> orderList = activeOrders.stream()
@@ -269,106 +253,99 @@ public class OrderController {
 
     // 통합된 주문 상태 변경 API
     @PatchMapping("/orders/{id}/status")
-    public ResponseEntity<Map<String, Object>> updateOrderStatus(
+    public ResponseEntity<OrderUpdateResponse> updateOrderStatus(
             @PathVariable Long id,
             @RequestBody Map<String, Object> request) {
-        try {
-            Order order = orderRepository.findByIdWithDetails(id)
-                    .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다: " + id));
-            
-            String newStatus = (String) request.get("status");
-            
-            // 상태별 다른 처리
-            switch (newStatus) {
-                case "COOKING":
-                    // 가능한 조리사가 있는지 확인
-                    if (!employeeAvailabilityService.hasAvailableCook()) {
-                        throw new IllegalStateException("현재 가능한 조리사가 없습니다. 잠시 후 다시 시도해주세요.");
-                    }
-                    order.startCooking();
-                    break;
-                case "COOKED":
-                    order.completeCooking();
-                    break;
-                case "DELIVERING":
-                    // 가능한 배달원이 있는지 확인
-                    if (!employeeAvailabilityService.hasAvailableDeliveryPerson()) {
-                        throw new IllegalStateException("현재 가능한 배달원이 없습니다. 잠시 후 다시 시도해주세요.");
-                    }
-                    order.startDelivering();
-                    break;
-                case "DONE":
-                    order.completeDelivery();
-                    // 주문 완료 시 고객 주문 수 증가 및 등급 갱신
-                    Customer customer = order.getCustomer();
-                    customer.incrementOrderCount();
-                    customerRepository.save(customer);
-                    break;
-                default:
-                    throw new IllegalArgumentException("유효하지 않은 주문 상태입니다: " + newStatus);
-            }
-            
-            Order savedOrder = orderRepository.save(order);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("orderId", savedOrder.getId());
-            response.put("status", savedOrder.getDeliveryStatus());
-            response.put("updatedAt", LocalDateTime.now());
-            
-            return ResponseEntity.ok(response);
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        Order order = orderRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다: " + id));
+        
+        String newStatus = (String) request.get("status");
+        
+        // 상태별 다른 처리
+        switch (newStatus) {
+            case "COOKING":
+                // 가능한 요리사가 있는지 확인
+                if (!employeeAvailabilityService.hasAvailableCook()) {
+                    throw new IllegalStateException("현재 가능한 요리사가 없습니다. 잠시 후 다시 시도해주세요.");
+                }
+                order.startCooking();
+                break;
+            case "COOKED":
+                order.completeCooking();
+                break;
+            case "DELIVERING":
+                // 가능한 배달원이 있는지 확인
+                if (!employeeAvailabilityService.hasAvailableDeliveryPerson()) {
+                    throw new IllegalStateException("현재 가능한 배달원이 없습니다. 잠시 후 다시 시도해주세요.");
+                }
+                order.startDelivering();
+                break;
+            case "DONE":
+                order.completeDelivery();
+                // 주문 완료 시 고객 주문 수 증가 및 등급 갱신
+                Customer customer = order.getCustomer();
+                customer.incrementOrderCount();
+                customerRepository.save(customer);
+                break;
+            default:
+                throw new IllegalArgumentException("유효하지 않은 주문 상태입니다: " + newStatus);
         }
+        
+        Order savedOrder = orderRepository.save(order);
+        
+        OrderUpdateResponse response = new OrderUpdateResponse(
+                savedOrder.getId(),
+                savedOrder.getDeliveryStatus().toString(),
+                LocalDateTime.now()
+        );
+        
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/orders/{id}/status")
-    public ResponseEntity<Map<String, Object>> getOrderStatus(@PathVariable Long id) {
+    public ResponseEntity<OrderStatusResponse> getOrderStatus(@PathVariable Long id) {
         Order order = orderRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다: " + id));
         
         // 주문 아이템들을 메뉴-서빙스타일 묶음으로 구성
-        List<Map<String, Object>> orderItems = new ArrayList<>();
+        List<OrderStatusResponse.OrderItemDetail> orderItems = new ArrayList<>();
         
         for (OrderItem orderItem : order.getOrderItems()) {
-            Map<String, Object> item = new HashMap<>();
-            
-            // 메뉴 정보
-            item.put("menuId", orderItem.getMenu().getId());
-            item.put("menuName", orderItem.getMenu().getName());
-            item.put("menuQuantity", orderItem.getQuantity());
-            item.put("menuPrice", orderItem.getMenu().getPrice());
-            
-            // 서빙 스타일 정보
-            if (orderItem.getServingStyle() != null) {
-                item.put("styleId", orderItem.getServingStyle().getId());
-                item.put("styleName", orderItem.getServingStyle().getName());
-                        item.put("stylePrice", orderItem.getServingStyle().getExtraPrice());
-            }
-            
             // 옵션들
-            List<Map<String, Object>> options = new ArrayList<>();
+            List<OrderStatusResponse.OrderItemDetail.OptionDetail> options = new ArrayList<>();
             for (OrderItemOption option : orderItem.getOrderItemOptions()) {
-                Map<String, Object> optionItem = new HashMap<>();
-                optionItem.put("optionId", option.getMenuOption().getId());
-                optionItem.put("optionName", option.getMenuOption().getItemName());
-                optionItem.put("optionQuantity", option.getQuantity());
-                                optionItem.put("optionPrice", option.getMenuOption().getItemPrice());
-                options.add(optionItem);
+                OrderStatusResponse.OrderItemDetail.OptionDetail optionDetail = 
+                        new OrderStatusResponse.OrderItemDetail.OptionDetail(
+                                option.getMenuOption().getId(),
+                                option.getMenuOption().getItemName(),
+                                option.getQuantity(),
+                                option.getMenuOption().getItemPrice()
+                        );
+                options.add(optionDetail);
             }
-            item.put("options", options);
             
-            orderItems.add(item);
+            OrderStatusResponse.OrderItemDetail itemDetail = 
+                    new OrderStatusResponse.OrderItemDetail(
+                            orderItem.getMenu().getId(),
+                            orderItem.getMenu().getName(),
+                            orderItem.getQuantity(),
+                            orderItem.getMenu().getPrice(),
+                            orderItem.getServingStyle() != null ? orderItem.getServingStyle().getId() : null,
+                            orderItem.getServingStyle() != null ? orderItem.getServingStyle().getName() : null,
+                            orderItem.getServingStyle() != null ? orderItem.getServingStyle().getExtraPrice() : 0,
+                            options
+                    );
+            orderItems.add(itemDetail);
         }
         
-        Map<String, Object> response = new HashMap<>();
-        response.put("orderId", order.getId());
-        response.put("status", order.getDeliveryStatus());
-        response.put("deliveryTime", order.getDeliveryTime().toString());
-        response.put("orderItems", orderItems);
-        response.put("createdAt", order.getCreatedAt());
-        response.put("deliveredAt", order.getDoneAt());
+        OrderStatusResponse response = new OrderStatusResponse(
+                order.getId(),
+                order.getDeliveryStatus().toString(),
+                order.getDeliveryTime().toString(),
+                orderItems,
+                order.getCreatedAt(),
+                order.getDoneAt()
+        );
         
         return ResponseEntity.ok(response);
     }
@@ -377,22 +354,11 @@ public class OrderController {
     // 간편 재주문 API
     @PostMapping("/orders/{id}/reorder")
     public ResponseEntity<OrderResponse> reorder(@PathVariable Long id, @Valid @RequestBody ReorderRequest request) {
-        try {
-            OrderDto orderDto = orderService.reorder(id, request);
-            Order order = orderRepository.findByIdWithDetails(orderDto.getId())
-                    .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다: " + orderDto.getId()));
-            OrderResponse response = OrderResponse.from(order);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (IllegalStateException e) {
-            if (e.getMessage().contains("마감되었습니다")) {
-                return ResponseEntity.status(HttpStatus.GONE).body(null); // 410 에러
-            } else if (e.getMessage().contains("영업시간이 아닙니다")) {
-                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(null); // 503 에러
-            }
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
-        }
+        OrderDto orderDto = orderService.reorder(id, request);
+        Order order = orderRepository.findByIdWithDetails(orderDto.getId())
+                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다: " + orderDto.getId()));
+        OrderResponse response = OrderResponse.from(order);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     // 직접적인 주문 생성 (상세 로직 포함)
@@ -401,10 +367,7 @@ public class OrderController {
         // 1) 메뉴/서빙스타일/옵션 존재 검증
         validateOrderItems(request);
 
-        // 2) 총가격계산
-        int totalPrice = priceCalculator.calcOrderTotal(request);
-
-        // 3) 고객 조회
+        // 2) 고객 조회
         Customer customer = customerRepository.findById(request.getCustomerId())
                 .orElseThrow(() -> new IllegalArgumentException("고객을 찾을 수 없습니다: " + request.getCustomerId()));
 
@@ -412,7 +375,7 @@ public class OrderController {
         Address address = addressRepository.findById(request.getAddressId())
                 .orElseThrow(() -> new IllegalArgumentException("주소를 찾을 수 없습니다: " + request.getAddressId()));
 
-        // 4) 주문 생성
+        // 3) 주문 생성
         Order order = Order.builder()
                 .customer(customer)
                 .address(address)
@@ -422,7 +385,7 @@ public class OrderController {
 
         Order savedOrder = orderRepository.save(order);
 
-        // 5) 주문 아이템들 생성
+        // 4) 주문 아이템들 생성
         for (OrderItemCreateRequest itemRequest : request.getOrderItems()) {
             Menu menu = menuRepository.findById(itemRequest.getMenuId()).get();
             ServingStyle servingStyle = servingStyleRepository.findById(itemRequest.getServingStyleId()).get();
@@ -437,16 +400,12 @@ public class OrderController {
             orderItemRepository.save(orderItem);
         }
 
-        // 6) 고객 주문 수 증가 및 등급 업데이트
+        // 5) 고객 주문 수 증가 및 등급 업데이트
         customer.incrementOrderCount();
         customerRepository.save(customer);
 
-        // 7) 응답 생성
-        OrderResponse response = OrderResponse.builder()
-                .orderId(savedOrder.getId())
-                .totalPrice(totalPrice)
-                .createdAt(LocalDateTime.now())
-                .build();
+        // 6) 응답 생성
+        OrderResponse response = OrderResponse.from(savedOrder);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

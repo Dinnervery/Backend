@@ -1,41 +1,35 @@
 package com.dinnervery.dto.order;
 
 import com.dinnervery.entity.OrderItem;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Value;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@Value
 public class OrderItemResponse {
 
-    private Long menuId;
-    private String name;
-    private int quantity;
-    private int unitPrice;
-    private int total;
-    private ServingStyleResponse servingStyle;
-    private List<OrderItemOptionResponse> options;
+    Long menuId;
+    String name;
+    int quantity;
+    int unitPrice;
+    int total;
+    ServingStyleResponse servingStyle;
+    List<OrderItemOptionResponse> options;
 
     public static OrderItemResponse from(OrderItem orderItem) {
-        return OrderItemResponse.builder()
-                .menuId(orderItem.getMenu().getId())
-                .name(orderItem.getMenu().getName())
-                .quantity(orderItem.getQuantity())
-                .unitPrice(orderItem.getMenu().getPrice())
-                .total(orderItem.getItemTotalPrice())
-                .servingStyle(orderItem.getServingStyle() != null ? 
-                        ServingStyleResponse.from(orderItem.getServingStyle()) : null)
-                .options(orderItem.getOrderItemOptions() != null ? 
+        return new OrderItemResponse(
+                orderItem.getMenu().getId(),
+                orderItem.getMenu().getName(),
+                orderItem.getQuantity(),
+                orderItem.getMenu().getPrice(),
+                orderItem.getItemTotalPrice(),
+                orderItem.getServingStyle() != null ? 
+                        ServingStyleResponse.from(orderItem.getServingStyle()) : null,
+                orderItem.getOrderItemOptions() != null ? 
                         orderItem.getOrderItemOptions().stream()
                                 .map(OrderItemOptionResponse::from)
-                                .collect(Collectors.toList()) : null)
-                .build();
+                                .collect(Collectors.toList()) : null
+        );
     }
 }

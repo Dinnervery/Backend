@@ -51,7 +51,7 @@ class DatabaseTest {
 
         // 서빙 스타일 생성
         ServingStyle servingStyle = ServingStyle.builder()
-                .name("기본 스타일")
+                .name("기본 스타일_" + System.currentTimeMillis())
                 .extraPrice(0)
                 .build();
         servingStyle = servingStyleRepository.save(servingStyle);
@@ -66,7 +66,7 @@ class DatabaseTest {
         assertThat(menu.getPrice()).isEqualTo(28000);
 
         assertThat(servingStyle.getId()).isNotNull();
-        assertThat(servingStyle.getName()).isEqualTo("기본 스타일");
+        assertThat(servingStyle.getName()).startsWith("기본 스타일_");
         assertThat(servingStyle.getExtraPrice()).isEqualTo(0);
 
         // 전체 조회 테스트

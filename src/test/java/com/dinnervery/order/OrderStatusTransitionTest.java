@@ -16,10 +16,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
@@ -32,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @SpringBootTest
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@Transactional
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class OrderStatusTransitionTest {
 
@@ -54,23 +54,11 @@ class OrderStatusTransitionTest {
     private Address address1;
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;
-
-    @Autowired
     private AddressRepository addressRepository;
 
     @BeforeEach
     void setUp() {
-        // SQL을 사용하여 강제 초기화 (외래키 제약조건 무시)
-        jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY FALSE");
-        jdbcTemplate.execute("TRUNCATE TABLE order_item_options");
-        jdbcTemplate.execute("TRUNCATE TABLE order_items");
-        jdbcTemplate.execute("TRUNCATE TABLE addresses");
-        jdbcTemplate.execute("TRUNCATE TABLE orders");
-        jdbcTemplate.execute("TRUNCATE TABLE employees");
-        jdbcTemplate.execute("TRUNCATE TABLE customers");
-        jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY TRUE");
-        
+        // given - 테스트 데이터 생성
         // 고객 생성
         customer = Customer.builder()
                 .loginId("test_customer_" + UUID.randomUUID())
@@ -117,54 +105,60 @@ class OrderStatusTransitionTest {
     }
 
     @Test
-    @Transactional
     void testOrderStatusTransition() {
-        // 초기 상태 확인
-        assertThat(order.getDeliveryStatus()).isEqualTo(Order.status.REQUESTED);
+        // given - 초기 상태 확인
+        assertThat(order.getDeliveryStatus()).isEqualTo(Order.Status.REQUESTED);
         assertThat(order.getRequestedAt()).isNotNull();
 
-        // 조리 시작
+        // when - 조리 시작
         order.startCooking();
         order = orderRepository.save(order);
-        assertThat(order.getDeliveryStatus()).isEqualTo(Order.status.COOKING);
+        
+        // then - 상태 검증
+        assertThat(order.getDeliveryStatus()).isEqualTo(Order.Status.COOKING);
         assertThat(order.getCookingAt()).isNotNull();
 
-        // 조리 완료
+        // when - 조리 완료
         order.completeCooking();
         order = orderRepository.save(order);
-        assertThat(order.getDeliveryStatus()).isEqualTo(Order.status.COOKED);
         
-        // 배달 시작
+        // then - 상태 검증
+        assertThat(order.getDeliveryStatus()).isEqualTo(Order.Status.COOKED);
+        
+        // when - 배달 시작
         order.startDelivering();
         order = orderRepository.save(order);
-        assertThat(order.getDeliveryStatus()).isEqualTo(Order.status.DELIVERING);
+        
+        // then - 상태 검증
+        assertThat(order.getDeliveryStatus()).isEqualTo(Order.Status.DELIVERING);
         assertThat(order.getDeliveringAt()).isNotNull();
 
-        // 배달 완료
+        // when - 배달 완료
         order.completeDelivery();
         order = orderRepository.save(order);
-        assertThat(order.getDeliveryStatus()).isEqualTo(Order.status.DONE);
+        
+        // then - 상태 검증
+        assertThat(order.getDeliveryStatus()).isEqualTo(Order.Status.DONE);
         assertThat(order.getDoneAt()).isNotNull();
     }
 
     @Test
-    @Transactional
     void testInvalidStatusTransitionException() {
-        // REQUESTED 상태에서 배달 시작 시도
+        // given & when & then - REQUESTED 상태에서 배달 시작 시도
         assertThatThrownBy(() -> order.startDelivering())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("배달 시작은 COOKED 상태에서만 가능합니다");
 
-        // REQUESTED 상태에서 배달 완료 시도
+        // given & when & then - REQUESTED 상태에서 배달 완료 시도
         assertThatThrownBy(() -> order.completeDelivery())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("배달 완료는 DELIVERING 상태에서만 가능합니다");
 
-        // 조리 시작 후 잘못된 상태 변경 시도
+        // given - 조리 시작 후 잘못된 상태 변경 시도
         order.startCooking();
         order = orderRepository.save(order);
 
-        // COOKING 상태에서 배달 완료 시도
+        // when & then - COOKING 상태에서 배달 완료 시도
         assertThatThrownBy(() -> order.completeDelivery())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("배달 완료는 DELIVERING 상태에서만 가능합니다");
@@ -172,101 +166,92 @@ class OrderStatusTransitionTest {
 
 
     @Test
-    @Transactional
     void testEmployeePermissions() {
-        // 조리사 권한 확인
+        // given & when & then - 조리사 권한 확인
         assertThat(cook.hasCookPermission()).isTrue();
         assertThat(cook.hasDeliveryPermission()).isFalse();
 
-        // 배달원 권한 확인
+        // given & when & then - 배달원 권한 확인
         assertThat(deliver.hasDeliveryPermission()).isTrue();
         assertThat(deliver.hasCookPermission()).isFalse();
     }
 
     @Test
-    @Transactional
     void testOrderStatusUpdateAPI() {
-        // 주문 상태를 COOKING으로 업데이트
+        // given - 주문 상태를 COOKING으로 업데이트
         Map<String, Object> statusUpdate = Map.of("status", "COOKING");
-        ResponseEntity<Map<String, Object>> response = orderController.updateOrderStatus(order.getId(), statusUpdate);
         
-        // 응답 검증
+        // when - 주문 상태 업데이트 API 호출
+        ResponseEntity<com.dinnervery.dto.response.OrderUpdateResponse> response = orderController.updateOrderStatus(order.getId(), statusUpdate);
+        
+        // then - 응답 검증
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        Map<String, Object> responseBody = response.getBody();
+        com.dinnervery.dto.response.OrderUpdateResponse responseBody = response.getBody();
         assertThat(responseBody).isNotNull();
         
         // 상태 업데이트 검증
         if (responseBody != null) {
-            assertThat(responseBody.get("orderId")).isEqualTo(order.getId());
-            assertThat(responseBody.get("status")).isEqualTo("COOKING");
+            assertThat(responseBody.getOrderId()).isEqualTo(order.getId());
+            assertThat(responseBody.getStatus()).isEqualTo("COOKING");
         }
         
         // 실제 주문 상태 확인
         Order updatedOrder = orderRepository.findById(order.getId()).orElseThrow();
-        assertThat(updatedOrder.getDeliveryStatus()).isEqualTo(Order.status.COOKING);
+        assertThat(updatedOrder.getDeliveryStatus()).isEqualTo(Order.Status.COOKING);
     }
 
     @Test
-    @Transactional
     void testCookingOrderListRetrievalAPI() {
-        // 주문을 COOKING 상태로 변경
+        // given - 주문을 COOKING 상태로 변경
         order.startCooking();
         order = orderRepository.save(order);
         
-        // 조리 대기목록 조회 API 호출
-        ResponseEntity<Map<String, Object>> response = orderController.getCookingOrders();
+        // when - 조리 대기목록 조회 API 호출
+        ResponseEntity<com.dinnervery.dto.response.OrderListResponse> response = orderController.getCookingOrders();
         
-        // 응답 검증
+        // then - 응답 검증
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        Map<String, Object> responseBody = response.getBody();
-        assertThat(responseBody).isNotNull();
-        
-        // 주문 목록 검증
-        if (responseBody != null && responseBody.get("orders") != null) {
-            @SuppressWarnings("unchecked")
-            java.util.List<Map<String, Object>> orders = (java.util.List<Map<String, Object>>) responseBody.get("orders");
-            assertThat(orders).isNotEmpty();
-            
-            // 첫 번째 주문 검증
-            Map<String, Object> orderData = orders.get(0);
-            assertThat(orderData.get("orderId")).isEqualTo(order.getId());
-            assertThat(orderData.get("status")).isEqualTo("COOKING");
-            assertThat(orderData.get("deliveryTime")).isNotNull();
-            assertThat(orderData.get("orderedItems")).isNotNull();
-        }
-    }
-
-    @Test
-    @Transactional
-    void testDeliveryOrderListRetrievalAPI() {
-        // 주문을 COOKED 상태로 변경
-        order.startCooking();
-        order.completeCooking();
-        order = orderRepository.save(order);
-        
-        // 배달 대기목록 조회 API 호출
-        ResponseEntity<Map<String, Object>> response = orderController.getDeliveryOrders();
-        
-        // 응답 검증
-        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        Map<String, Object> responseBody = response.getBody();
+        com.dinnervery.dto.response.OrderListResponse responseBody = response.getBody();
         assertThat(responseBody).isNotNull();
         
         // 주문 목록 검증
         if (responseBody != null) {
-            Object ordersObj = responseBody.get("orders");
-            if (ordersObj != null) {
-                @SuppressWarnings("unchecked")
-                java.util.List<Map<String, Object>> orders = (java.util.List<Map<String, Object>>) ordersObj;
-                assertThat(orders).isNotEmpty();
-                
-                // 첫 번째 주문 검증
-                Map<String, Object> orderData = orders.get(0);
-                assertThat(orderData.get("orderId")).isEqualTo(order.getId());
-                assertThat(orderData.get("status")).isEqualTo("COOKED");
-                assertThat(orderData.get("deliveryTime")).isNotNull();
-                assertThat(orderData.get("orderedItems")).isNotNull();
-            }
+            assertThat(responseBody.getOrders()).isNotEmpty();
+            
+            // 첫 번째 주문 검증
+            com.dinnervery.dto.response.OrderListResponse.OrderSummary orderData = responseBody.getOrders().get(0);
+            assertThat(orderData.getOrderId()).isEqualTo(order.getId());
+            assertThat(orderData.getStatus()).isEqualTo("COOKING");
+            assertThat(orderData.getDeliveryTime()).isNotNull();
+            assertThat(orderData.getOrderedItems()).isNotNull();
+        }
+    }
+
+    @Test
+    void testDeliveryOrderListRetrievalAPI() {
+        // given - 주문을 COOKED 상태로 변경
+        order.startCooking();
+        order.completeCooking();
+        order = orderRepository.save(order);
+        
+        // when - 배달 대기목록 조회 API 호출
+        ResponseEntity<com.dinnervery.dto.response.OrderListResponse> response = orderController.getDeliveryOrders();
+        
+        // then - 응답 검증
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        com.dinnervery.dto.response.OrderListResponse responseBody = response.getBody();
+        assertThat(responseBody).isNotNull();
+        
+        // 주문 목록 검증
+        if (responseBody != null) {
+            assertThat(responseBody.getOrders()).isNotEmpty();
+            
+            // 첫 번째 주문 검증
+            com.dinnervery.dto.response.OrderListResponse.OrderSummary orderData = responseBody.getOrders().get(0);
+            assertThat(orderData.getOrderId()).isEqualTo(order.getId());
+            assertThat(orderData.getStatus()).isEqualTo("COOKED");
+            assertThat(orderData.getDeliveryTime()).isNotNull();
+            assertThat(orderData.getOrderedItems()).isNotNull();
         }
     }
 }

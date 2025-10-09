@@ -1,40 +1,34 @@
 package com.dinnervery.dto.order;
 
 import com.dinnervery.entity.Order;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Value;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@Value
 public class OrderResponse {
 
-    private Long orderId;
-    private Long customerId;
-    private String status;
-    private int totalPrice;
-    private List<OrderItemResponse> orderItems;
-    private LocalDateTime createdAt;
-    private String deliveryTime;
+    Long orderId;
+    Long customerId;
+    String status;
+    int totalPrice;
+    List<OrderItemResponse> orderItems;
+    LocalDateTime createdAt;
+    String deliveryTime;
 
     public static OrderResponse from(Order order) {
-        return OrderResponse.builder()
-                .orderId(order.getId())
-                .customerId(order.getCustomer().getId())
-                .status(order.getDeliveryStatus().name())
-                .totalPrice(order.getTotalPrice())
-                .orderItems(order.getOrderItems().stream()
+        return new OrderResponse(
+                order.getId(),
+                order.getCustomer().getId(),
+                order.getDeliveryStatus().name(),
+                order.getTotalPrice(),
+                order.getOrderItems().stream()
                         .map(OrderItemResponse::from)
-                        .collect(Collectors.toList()))
-                .createdAt(order.getCreatedAt())
-                .deliveryTime(order.getDeliveryTime().toString())
-                .build();
+                        .collect(Collectors.toList()),
+                order.getCreatedAt(),
+                order.getDeliveryTime().toString()
+        );
     }
 }

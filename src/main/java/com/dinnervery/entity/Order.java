@@ -35,7 +35,7 @@ public class Order extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private status deliveryStatus = status.REQUESTED;
+    private Status deliveryStatus = Status.REQUESTED;
 
     @Column(name = "requested_at", nullable = false)
     private LocalDateTime requestedAt;
@@ -104,33 +104,33 @@ public class Order extends BaseEntity {
 
     // 배달 상태 변경 메서드들
     public void startCooking() {
-        if (this.deliveryStatus != status.REQUESTED) {
+        if (this.deliveryStatus != Status.REQUESTED) {
             throw new IllegalStateException("조리 시작은 REQUESTED 상태에서만 가능합니다. 현재 상태: " + this.deliveryStatus);
         }
-        this.deliveryStatus = status.COOKING;
+        this.deliveryStatus = Status.COOKING;
         this.cookingAt = LocalDateTime.now();
     }
 
     public void completeCooking() {
-        if (this.deliveryStatus != status.COOKING) {
+        if (this.deliveryStatus != Status.COOKING) {
             throw new IllegalStateException("조리 완료는 COOKING 상태에서만 가능합니다. 현재 상태: " + this.deliveryStatus);
         }
-        this.deliveryStatus = status.COOKED;
+        this.deliveryStatus = Status.COOKED;
     }
 
     public void startDelivering() {
-        if (this.deliveryStatus != status.COOKED) {
+        if (this.deliveryStatus != Status.COOKED) {
             throw new IllegalStateException("배달 시작은 COOKED 상태에서만 가능합니다. 현재 상태: " + this.deliveryStatus);
         }
-        this.deliveryStatus = status.DELIVERING;
+        this.deliveryStatus = Status.DELIVERING;
         this.deliveringAt = LocalDateTime.now();
     }
 
     public void completeDelivery() {
-        if (this.deliveryStatus != status.DELIVERING) {
+        if (this.deliveryStatus != Status.DELIVERING) {
             throw new IllegalStateException("배달 완료는 DELIVERING 상태에서만 가능합니다. 현재 상태: " + this.deliveryStatus);
         }
-        this.deliveryStatus = status.DONE;
+        this.deliveryStatus = Status.DONE;
         this.doneAt = LocalDateTime.now();
     }
 
@@ -141,7 +141,7 @@ public class Order extends BaseEntity {
     }
 
 
-    public enum status {
+    public enum Status {
         REQUESTED,  // 주문 요청
         COOKING,    // 조리 중
         COOKED,     // 조리 완료

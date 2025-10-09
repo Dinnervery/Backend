@@ -23,4 +23,20 @@ spring:
       enabled: true
       path: /h2-console
 
-
+# 비즈니스 설정
+business:
+  hours:
+    open-time: "15:30"
+    close-time: "22:00"
+    last-order-time: "21:30"
+    delivery-start-time: "16:00"
+    delivery-end-time: "22:00"
+    min-delivery-minutes: 30
+    delivery-time-unit: 10
+  menu:
+    special-dishes:
+      champagne-festival-dinner:
+        name: "샴페인 축제 디너"
+        price: 90000
+  customer:
+    vip-discount-rate: 10

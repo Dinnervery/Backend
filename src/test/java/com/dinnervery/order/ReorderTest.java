@@ -13,16 +13,17 @@ import com.dinnervery.repository.CustomerRepository;
 import com.dinnervery.repository.MenuRepository;
 import com.dinnervery.repository.OrderRepository;
 import com.dinnervery.repository.ServingStyleRepository;
+import com.dinnervery.service.BusinessHoursService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.ResponseEntity;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -30,11 +31,13 @@ import java.util.UUID;
 import java.time.LocalTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@Transactional
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class ReorderTest {
 
@@ -54,10 +57,10 @@ class ReorderTest {
     private AddressRepository addressRepository;
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;
-
-    @Autowired
     private ServingStyleRepository servingStyleRepository;
+
+    @MockBean
+    private BusinessHoursService businessHoursService;
 
     private Customer customer;
     private Menu menu1;
@@ -69,17 +72,11 @@ class ReorderTest {
 
     @BeforeEach
     void setUp() {
-        // SQL을 사용하여 강제 초기화 (외래키 제약조건 무시)
-        jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY FALSE");
-        jdbcTemplate.execute("TRUNCATE TABLE order_item_options");
-        jdbcTemplate.execute("TRUNCATE TABLE order_items");
-        jdbcTemplate.execute("TRUNCATE TABLE orders");
-        jdbcTemplate.execute("TRUNCATE TABLE addresses");
-        jdbcTemplate.execute("TRUNCATE TABLE customers");
-        jdbcTemplate.execute("TRUNCATE TABLE menus");
-        jdbcTemplate.execute("TRUNCATE TABLE serving_styles");
-        jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY TRUE");
+        // Mock 설정 - 영업시간 검증 우회
+        when(businessHoursService.isAfterLastOrderTime()).thenReturn(false);
+        when(businessHoursService.isBusinessHours()).thenReturn(true);
         
+        // given - 테스트 데이터 생성
         // 고객 생성
         customer = Customer.builder()
                 .loginId("test_customer_" + UUID.randomUUID())
@@ -106,7 +103,7 @@ class ReorderTest {
 
         // 서빙 스타일 생성
         servingStyle = ServingStyle.builder()
-                .name("기본")
+                .name("기본_" + System.currentTimeMillis())
                 .extraPrice(0)
                 .build();
         servingStyle = servingStyleRepository.save(servingStyle);
@@ -152,19 +149,18 @@ class ReorderTest {
     }
 
     @Test
-    @Transactional
     void testReorderAPI() {
-        // 재주문 요청 생성
+        // given - 재주문 요청 생성
         ReorderRequest reorderRequest = ReorderRequest.builder()
                 .customerId(customer.getId())
                 .addressId(address2.getId()) // 다른 주소로 재주문
                 .cardNumber("9876-5432-1098-7654")
                 .build();
         
-        // 재주문 API 호출
+        // when - 재주문 API 호출
         ResponseEntity<com.dinnervery.dto.order.OrderResponse> response = orderController.reorder(originalOrder.getId(), reorderRequest);
         
-        // 응답 검증
+        // then - 응답 검증
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         com.dinnervery.dto.order.OrderResponse responseBody = response.getBody();
         assertThat(responseBody).isNotNull();
@@ -197,16 +193,15 @@ class ReorderTest {
     }
 
     @Test
-    @Transactional
     void testReorderWithNonExistentOrderException() {
-        // 재주문 요청 생성
+        // given - 재주문 요청 생성
         ReorderRequest reorderRequest = ReorderRequest.builder()
                 .customerId(customer.getId())
                 .addressId(address1.getId())
                 .cardNumber("1234-5678-9012-3456")
                 .build();
         
-        // 존재하지 않는 주문 ID로 재주문 시도
+        // when & then - 존재하지 않는 주문 ID로 재주문 시도
         assertThatThrownBy(() -> orderController.reorder(999L, reorderRequest))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("원본 주문을 찾을 수 없습니다");

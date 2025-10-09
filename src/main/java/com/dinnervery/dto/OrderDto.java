@@ -40,7 +40,7 @@ public class OrderDto {
                         .map(OrderItemDto::from)
                         .toList())
                 .totalPrice(order.getTotalPrice())
-                .discountAmount(order.getDiscountAmount())
+                .discountAmount(order.getDiscountAmount() != null ? order.getDiscountAmount() : 0)
                 .finalPrice(order.getFinalPrice())
                 .createdAt(order.getCreatedAt())
                 .modifiedAt(order.getUpdatedAt())

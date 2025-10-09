@@ -4,6 +4,7 @@ import com.dinnervery.entity.Employee;
 import com.dinnervery.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -42,6 +43,7 @@ public class EmployeeAvailabilityService {
      * 가능한 조리사 한 명을 배당
      * @return 배당된 조리사
      */
+    @Transactional
     public Optional<Employee> assignAvailableCook() {
         List<Employee> availableCooks = employeeRepository.findByTaskAndWorkStatus(
                 Employee.EmployeeTask.COOK, 
@@ -63,6 +65,7 @@ public class EmployeeAvailabilityService {
      * 가능한 배달원 한 명을 배당
      * @return 배당된 배달원
      */
+    @Transactional
     public Optional<Employee> assignAvailableDeliveryPerson() {
         List<Employee> availableDeliveryPersons = employeeRepository.findByTaskAndWorkStatus(
                 Employee.EmployeeTask.DELIVERY, 
@@ -84,6 +87,7 @@ public class EmployeeAvailabilityService {
      * 직원의 작업 완료 처리
      * @param employee 작업을 완료한 직원
      */
+    @Transactional
     public void releaseEmployee(Employee employee) {
         employee.finishWork();
         employeeRepository.save(employee);

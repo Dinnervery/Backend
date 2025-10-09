@@ -1,5 +1,6 @@
 package com.dinnervery.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalTime;
@@ -7,10 +8,46 @@ import java.time.LocalTime;
 @Service
 public class BusinessHoursService {
 
-    // 영업시간 설정 (오후 3시 30분~ 오후 10시)
-    private static final LocalTime OPEN_TIME = LocalTime.of(15, 30); // 오후 3시 30분
-    private static final LocalTime CLOSE_TIME = LocalTime.of(22, 0); // 오후 10시
-    private static final LocalTime LAST_ORDER_TIME = LocalTime.of(21, 30); // 오후 9시 30분
+    @Value("${business.hours.open-time}")
+    private String openTimeStr;
+    
+    @Value("${business.hours.close-time}")
+    private String closeTimeStr;
+    
+    @Value("${business.hours.last-order-time}")
+    private String lastOrderTimeStr;
+    
+    @Value("${business.hours.delivery-start-time}")
+    private String deliveryStartTimeStr;
+    
+    @Value("${business.hours.delivery-end-time}")
+    private String deliveryEndTimeStr;
+    
+    @Value("${business.hours.min-delivery-minutes}")
+    private int minDeliveryMinutes;
+    
+    @Value("${business.hours.delivery-time-unit}")
+    private int deliveryTimeUnit;
+
+    private LocalTime getOpenTime() {
+        return LocalTime.parse(openTimeStr);
+    }
+    
+    private LocalTime getCloseTime() {
+        return LocalTime.parse(closeTimeStr);
+    }
+    
+    private LocalTime getLastOrderTime() {
+        return LocalTime.parse(lastOrderTimeStr);
+    }
+    
+    private LocalTime getDeliveryStartTime() {
+        return LocalTime.parse(deliveryStartTimeStr);
+    }
+    
+    private LocalTime getDeliveryEndTime() {
+        return LocalTime.parse(deliveryEndTimeStr);
+    }
 
     /**
      * 현재 시간이 영업시간인지 확인
@@ -19,7 +56,7 @@ public class BusinessHoursService {
     public boolean isBusinessHours() {
         LocalTime now = LocalTime.now();
         
-        return !now.isBefore(OPEN_TIME) && now.isBefore(CLOSE_TIME);
+        return !now.isBefore(getOpenTime()) && now.isBefore(getCloseTime());
     }
 
     /**
@@ -28,7 +65,7 @@ public class BusinessHoursService {
      */
     public boolean isAfterLastOrderTime() {
         LocalTime now = LocalTime.now();
-        return now.isAfter(LAST_ORDER_TIME);
+        return now.isAfter(getLastOrderTime());
     }
 
     /**
@@ -38,18 +75,14 @@ public class BusinessHoursService {
      */
     public boolean isValidDeliveryTime(LocalTime deliveryTime) {
         LocalTime now = LocalTime.now();
-        LocalTime minDeliveryTime = now.plusMinutes(30);
-        
-        // 배송 가능 시간: 16:00 ~ 22:00
-        LocalTime deliveryStartTime = LocalTime.of(16, 0);
-        LocalTime deliveryEndTime = LocalTime.of(22, 0);
+        LocalTime minDeliveryTime = now.plusMinutes(minDeliveryMinutes);
         
         // 최소 배송 시간과 배송 가능 시간 중 더 늦은 시간으로 설정
-        LocalTime effectiveMinTime = minDeliveryTime.isAfter(deliveryStartTime) ? minDeliveryTime : deliveryStartTime;
+        LocalTime effectiveMinTime = minDeliveryTime.isAfter(getDeliveryStartTime()) ? minDeliveryTime : getDeliveryStartTime();
         
-        // 10분 단위로 반올림
+        // 배송 시간 단위로 반올림
         int minutes = effectiveMinTime.getMinute();
-        int roundedMinutes = ((minutes + 9) / 10) * 10;
+        int roundedMinutes = ((minutes + deliveryTimeUnit - 1) / deliveryTimeUnit) * deliveryTimeUnit;
         if (roundedMinutes >= 60) {
             effectiveMinTime = effectiveMinTime.plusHours(1).withMinute(0);
         } else {
@@ -57,8 +90,8 @@ public class BusinessHoursService {
         }
         
         return !deliveryTime.isBefore(effectiveMinTime) && 
-               !deliveryTime.isAfter(deliveryEndTime) &&
-               deliveryTime.getMinute() % 10 == 0;
+               !deliveryTime.isAfter(getDeliveryEndTime()) &&
+               deliveryTime.getMinute() % deliveryTimeUnit == 0;
     }
 
     /**
@@ -70,9 +103,9 @@ public class BusinessHoursService {
         
         return BusinessHoursStatus.builder()
                 .isOpen(isOpen)
-                .openTime(OPEN_TIME)
-                .closeTime(CLOSE_TIME)
-                .lastOrderTime(LAST_ORDER_TIME)
+                .openTime(getOpenTime())
+                .closeTime(getCloseTime())
+                .lastOrderTime(getLastOrderTime())
                 .message(isOpen ? "현재 주문 가능합니다" : "영업시간이 아닙니다")
                 .build();
     }

@@ -5,24 +5,33 @@
 #### Gradle을 사용한 실행
 
 ```bash
-# 의존성 설치 및 빌드
+# 의존성 설치 및 빌드 (Linux/Mac)
 ./gradlew build
 
-# 애플리케이션 실행
+# 애플리케이션 실행 (Linux/Mac)
 ./gradlew bootRun
+
+# Windows 환경에서는
+# gradlew build
+# gradlew bootRun
 ```
 
 ### 테스트 실행
 
 ```bash
-# 모든 테스트 실행
+# 모든 테스트 실행 (Linux/Mac)
 ./gradlew test
 
-# 코드 커버리지 포함 테스트
+# 코드 커버리지 포함 테스트 (Linux/Mac)
 ./gradlew test jacocoTestReport
 
-# 특정 테스트 클래스 실행
+# 특정 테스트 클래스 실행 (Linux/Mac)
 ./gradlew test --tests "CustomerGradeUpdateTest"
+
+# Windows 환경에서는
+# gradlew test
+# gradlew test jacocoTestReport
+# gradlew test --tests "CustomerGradeUpdateTest"
 ```
 
 ## 주요 기능

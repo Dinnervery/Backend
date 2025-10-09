@@ -1,5 +1,6 @@
 package com.dinnervery.common;
 
+import com.dinnervery.dto.response.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,14 +16,21 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, String>> handleIllegalArgumentException(IllegalArgumentException e) {
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException e) {
         log.error("IllegalArgumentException: {}", e.getMessage());
         
-        Map<String, String> error = new HashMap<>();
-        error.put("error", "BAD_REQUEST");
-        error.put("message", e.getMessage());
+        ErrorResponse error = new ErrorResponse("BAD_REQUEST", e.getMessage());
         
         return ResponseEntity.badRequest().body(error);
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalStateException(IllegalStateException e) {
+        log.error("IllegalStateException: {}", e.getMessage());
+        
+        ErrorResponse error = new ErrorResponse("CONFLICT", e.getMessage());
+        
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -40,12 +48,10 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, String>> handleGenericException(Exception e) {
+    public ResponseEntity<ErrorResponse> handleGenericException(Exception e) {
         log.error("Unexpected error: ", e);
         
-        Map<String, String> error = new HashMap<>();
-        error.put("error", "INTERNAL_SERVER_ERROR");
-        error.put("message", "서버 내부 오류가 발생했습니다.");
+        ErrorResponse error = new ErrorResponse("INTERNAL_SERVER_ERROR", "서버 내부 오류가 발생했습니다.");
         
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }

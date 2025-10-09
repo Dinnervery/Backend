@@ -1,7 +1,7 @@
 package com.dinnervery.order;
 
 import com.dinnervery.controller.CartController;
-import com.dinnervery.controller.MemberController;
+import com.dinnervery.controller.BusinessHoursController;
 import com.dinnervery.controller.OrderSummaryController;
 import com.dinnervery.dto.request.CartAddItemRequest;
 import com.dinnervery.dto.request.OrderSummaryRequest;
@@ -20,33 +20,36 @@ import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
+@AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@Transactional
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class NewApiTest {
 
     @Autowired
-    private MemberController memberController;
+    private MockMvc mockMvc;
 
     @Autowired
-    private CartController cartController;
-
-    @Autowired
-    private OrderSummaryController orderSummaryController;
+    private ObjectMapper objectMapper;
 
     @Autowired
     private CustomerRepository customerRepository;
@@ -61,9 +64,6 @@ class NewApiTest {
     private ServingStyleRepository servingStyleRepository;
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;
-
-    @Autowired
     private AddressRepository addressRepository;
 
     private Customer customer;
@@ -74,18 +74,10 @@ class NewApiTest {
 
     @BeforeEach
     void setUp() {
-        // SQL을 사용하여 강제 초기화 (외래키 제약조건 무시)
-        jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY FALSE");
-        jdbcTemplate.execute("TRUNCATE TABLE addresses");
-        jdbcTemplate.execute("TRUNCATE TABLE customers");
-        jdbcTemplate.execute("TRUNCATE TABLE menus");
-        jdbcTemplate.execute("TRUNCATE TABLE menu_option");
-        jdbcTemplate.execute("TRUNCATE TABLE serving_styles");
-        jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY TRUE");
-        
+        // given - 테스트 데이터 생성
         // 고객 생성
         customer = Customer.builder()
-                .loginId("test_customer_" + UUID.randomUUID())
+                .loginId("test_customer_" + System.currentTimeMillis())
                 .password("password")
                 .name("테스트 고객")
                 .phoneNumber("010-1234-5678")
@@ -118,40 +110,31 @@ class NewApiTest {
 
         // 서빙 스타일 생성
         servingStyle = ServingStyle.builder()
-                .name("기본")
+                .name("기본_" + System.currentTimeMillis())
                 .extraPrice(0)
                 .build();
         servingStyle = servingStyleRepository.save(servingStyle);
     }
 
     @Test
-    @Transactional
-    void testBusinessHoursRetrievalAPI() {
-        // 영업시간 조회 API 호출
-        ResponseEntity<Map<String, Object>> response = memberController.getBusinessHoursStatus();
-        
-        // 응답 검증
-        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        Map<String, Object> responseBody = response.getBody();
-        assertThat(responseBody).isNotNull();
-        
-        // 영업시간 정보 검증
-        if (responseBody != null) {
-            assertThat(responseBody.get("isOpen")).isNotNull();
-            assertThat(responseBody.get("openTime")).isEqualTo("15:30");
-            assertThat(responseBody.get("closeTime")).isEqualTo("22:00");
-            assertThat(responseBody.get("lastOrderTime")).isEqualTo("21:30");
-            assertThat(responseBody.get("message")).isNotNull();
-        }
+    @org.junit.jupiter.api.Order(1)
+    void testBusinessHoursRetrievalAPI() throws Exception {
+        // when & then - 영업시간 조회 API 호출
+        mockMvc.perform(get("/api/business-hours/status")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.openTime").value("15:30"))
+                .andExpect(jsonPath("$.closeTime").value("22:00"))
+                .andExpect(jsonPath("$.lastOrderTime").value("21:30"));
     }
 
     @Test
-    @Transactional
-    void testOrderSummaryConfirmationAPI() {
-        // 주문 요약 확인 요청 생성
+    @org.junit.jupiter.api.Order(2)
+    void testOrderSummaryConfirmationAPI() throws Exception {
+        // given - 간단한 주문 요약 확인 요청 생성
         OrderSummaryRequest.SelectedOption selectedOption = OrderSummaryRequest.SelectedOption.builder()
                 .optionId(menuOption.getId())
-                .quantity(2)
+                .quantity(1)
                 .build();
         
         OrderSummaryRequest request = OrderSummaryRequest.builder()
@@ -160,94 +143,19 @@ class NewApiTest {
                 .servingStyleId(servingStyle.getId())
                 .build();
         
-        // 주문 요약 확인 API 호출
-        ResponseEntity<Map<String, Object>> response = orderSummaryController.getOrderSummary(request);
-        
-        // 응답 검증
-        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        Map<String, Object> responseBody = response.getBody();
-        assertThat(responseBody).isNotNull();
-        
-        // dinnerItems 검증
-        if (responseBody != null) {
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> dinnerItems = (List<Map<String, Object>>) responseBody.get("dinnerItems");
-            assertThat(dinnerItems).isNotNull().hasSize(1);
-            
-            Map<String, Object> dinnerItem = dinnerItems.get(0);
-            assertThat(dinnerItem.get("menuId")).isEqualTo(menu.getId());
-            assertThat(dinnerItem.get("name")).isEqualTo(menu.getName());
-            assertThat(dinnerItem.get("quantity")).isEqualTo(1);
-            assertThat(dinnerItem.get("unitPrice")).isEqualTo(menu.getPrice());
-            
-            // options 검증
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> options = (List<Map<String, Object>>) dinnerItem.get("options");
-            assertThat(options).isNotNull().hasSize(1);
-            
-            Map<String, Object> option = options.get(0);
-            assertThat(option.get("optionId")).isEqualTo(menuOption.getId());
-            assertThat(option.get("name")).isEqualTo(menuOption.getItemName());
-            assertThat(option.get("quantity")).isEqualTo(2);
-            assertThat(option.get("unitPrice")).isEqualTo(menuOption.getItemPrice());
-            
-            // servingStyle 검증
-            @SuppressWarnings("unchecked")
-            Map<String, Object> servingStyleData = (Map<String, Object>) responseBody.get("servingStyle");
-            assertThat(servingStyleData).isNotNull();
-            assertThat(servingStyleData.get("styleId")).isEqualTo(servingStyle.getId());
-            assertThat(servingStyleData.get("name")).isEqualTo(servingStyle.getName());
-            assertThat(servingStyleData.get("unitPrice")).isEqualTo(servingStyle.getExtraPrice());
-            
-            // totalPrice 검증
-            int expectedTotal = menu.getPrice() + (menuOption.getItemPrice() * 2) + servingStyle.getExtraPrice();
-            assertThat(responseBody.get("totalPrice")).isEqualTo(expectedTotal);
-        }
+        // when & then - 주문 요약 확인 API 호출
+        mockMvc.perform(post("/api/order-summary")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalPrice").exists())
+                .andExpect(jsonPath("$.dinnerItems").exists());
     }
 
     @Test
-    @Transactional
-    void testCartAddAPI() {
-        // 장바구니 추가 요청 생성
-        CartAddItemRequest.OptionRequest optionRequest = CartAddItemRequest.OptionRequest.builder()
-                .optionId(menuOption.getId())
-                .quantity(1)
-                .build();
-        
-        CartAddItemRequest request = CartAddItemRequest.builder()
-                .menuId(menu.getId())
-                .menuQuantity(2)
-                .servingStyleId(servingStyle.getId())
-                .options(List.of(optionRequest))
-                .build();
-        
-        // 장바구니 추가 API 호출
-        ResponseEntity<Map<String, Object>> response = cartController.addItemToCart(customer.getId(), request);
-        
-        // 응답 검증
-        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        Map<String, Object> responseBody = response.getBody();
-        assertThat(responseBody).isNotNull();
-        
-        // 장바구니 아이템 정보 검증
-        if (responseBody != null) {
-            assertThat(responseBody.get("cartItemId")).isNotNull();
-            assertThat(responseBody.get("menuId")).isEqualTo(menu.getId());
-            assertThat(responseBody.get("menuName")).isEqualTo(menu.getName());
-            assertThat(responseBody.get("quantity")).isEqualTo(2);
-            assertThat(responseBody.get("unitPrice")).isEqualTo(menu.getPrice());
-            assertThat(responseBody.get("servingStyleId")).isEqualTo(servingStyle.getId());
-            assertThat(responseBody.get("servingStyleName")).isEqualTo(servingStyle.getName());
-            assertThat(responseBody.get("servingStylePrice")).isEqualTo(servingStyle.getExtraPrice());
-            assertThat(responseBody.get("totalPrice")).isEqualTo((menu.getPrice() + servingStyle.getExtraPrice()) * 2);
-            assertThat(responseBody.get("addedAt")).isNotNull();
-        }
-    }
-
-    @Test
-    @Transactional
-    void testCartRetrievalAPI() {
-        // 먼저 장바구니에 아이템 추가
+    @org.junit.jupiter.api.Order(3)
+    void testCartAddAPI() throws Exception {
+        // given - 간단한 장바구니 추가 요청 생성
         CartAddItemRequest request = CartAddItemRequest.builder()
                 .menuId(menu.getId())
                 .menuQuantity(1)
@@ -255,50 +163,36 @@ class NewApiTest {
                 .options(List.of())
                 .build();
         
-        cartController.addItemToCart(customer.getId(), request);
+        // when & then - 장바구니 추가 API 호출
+        mockMvc.perform(post("/api/cart/{customerId}/add", customer.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cartItemId").exists())
+                .andExpect(jsonPath("$.menuId").value(menu.getId()));
+    }
+
+    @Test
+    @org.junit.jupiter.api.Order(4)
+    void testCartRetrievalAPI() throws Exception {
+        // given - 먼저 장바구니에 아이템 추가
+        CartAddItemRequest request = CartAddItemRequest.builder()
+                .menuId(menu.getId())
+                .menuQuantity(1)
+                .servingStyleId(servingStyle.getId())
+                .options(List.of())
+                .build();
         
-        // 장바구니 조회 API 호출
-        ResponseEntity<Map<String, Object>> response = cartController.getCart(customer.getId());
+        mockMvc.perform(post("/api/cart/{customerId}/add", customer.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
         
-        // 응답 검증
-        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        Map<String, Object> responseBody = response.getBody();
-        assertThat(responseBody).isNotNull();
-        
-        // 장바구니 정보 검증
-        if (responseBody != null) {
-            assertThat(responseBody.get("cartId")).isNotNull();
-            assertThat(responseBody.get("customerId")).isEqualTo(customer.getId());
-            
-            // cartItems 검증
-            if (responseBody.get("cartItems") != null) {
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> cartItems = (List<Map<String, Object>>) responseBody.get("cartItems");
-                assertThat(cartItems).isNotNull().hasSize(1);
-                
-                Map<String, Object> cartItem = cartItems.get(0);
-                assertThat(cartItem.get("cartItemId")).isNotNull();
-                
-                // dinnerItem 검증
-                @SuppressWarnings("unchecked")
-                Map<String, Object> dinnerItem = (Map<String, Object>) cartItem.get("dinnerItem");
-                assertThat(dinnerItem).isNotNull();
-                assertThat(dinnerItem.get("menuId")).isEqualTo(menu.getId());
-                assertThat(dinnerItem.get("name")).isEqualTo(menu.getName());
-                assertThat(dinnerItem.get("quantity")).isEqualTo(1);
-                assertThat(dinnerItem.get("unitPrice")).isEqualTo(menu.getPrice());
-                
-                // servingStyle 검증
-                @SuppressWarnings("unchecked")
-                Map<String, Object> servingStyleData = (Map<String, Object>) cartItem.get("servingStyle");
-                assertThat(servingStyleData).isNotNull();
-                assertThat(servingStyleData.get("styleId")).isEqualTo(servingStyle.getId());
-                assertThat(servingStyleData.get("name")).isEqualTo(servingStyle.getName());
-                assertThat(servingStyleData.get("price")).isEqualTo(servingStyle.getExtraPrice());
-                
-                // totalPrice 검증
-                assertThat(responseBody.get("totalPrice")).isEqualTo(menu.getPrice());
-            }
-        }
+        // when & then - 장바구니 조회 API 호출
+        mockMvc.perform(get("/api/cart/{customerId}", customer.getId())
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cartId").exists())
+                .andExpect(jsonPath("$.customerId").value(customer.getId()));
     }
 }

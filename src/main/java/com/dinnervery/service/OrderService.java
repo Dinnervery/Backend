@@ -104,7 +104,7 @@ public class OrderService {
                 .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다: " + orderId));
 
         // 주문을 완료 상태로 변경
-        if (order.getDeliveryStatus() == Order.status.REQUESTED) {
+        if (order.getDeliveryStatus() == Order.Status.REQUESTED) {
             order.startCooking();
             order.completeCooking();
             order.startDelivering();

@@ -1,6 +1,6 @@
 package com.dinnervery.order;
 
-import com.dinnervery.controller.MemberController;
+import com.dinnervery.controller.AuthController;
 import com.dinnervery.controller.MenuController;
 import com.dinnervery.entity.Address;
 import com.dinnervery.entity.Customer;
@@ -14,12 +14,14 @@ import com.dinnervery.repository.OrderRepository;
 import com.dinnervery.repository.ServingStyleRepository;
 import com.dinnervery.repository.MenuRepository;
 import com.dinnervery.service.OrderService;
+import com.dinnervery.service.BusinessHoursService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
@@ -31,6 +33,7 @@ import java.util.UUID;
 import java.time.LocalTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -39,7 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CustomerGradeUpdateTest {
 
     @Autowired
-    private MemberController memberController;
+    private AuthController authController;
 
     @Autowired
     private MenuController menuController;
@@ -70,8 +73,15 @@ class CustomerGradeUpdateTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @MockBean
+    private BusinessHoursService businessHoursService;
+
     @BeforeEach
     void setUp() {
+        // Mock 설정 - 영업시간 검증 우회
+        when(businessHoursService.isAfterLastOrderTime()).thenReturn(false);
+        when(businessHoursService.isBusinessHours()).thenReturn(true);
+        
         // SQL을 사용하여 강제 초기화 (외래키 제약조건 무시)
         jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY FALSE");
         jdbcTemplate.execute("TRUNCATE TABLE order_item_options");
@@ -113,7 +123,7 @@ class CustomerGradeUpdateTest {
 
         // 서빙 스타일 생성
         servingStyle = ServingStyle.builder()
-                .name("기본 스타일")
+                .name("기본 스타일_" + System.currentTimeMillis())
                 .extraPrice(0)
                 .build();
         servingStyle = servingStyleRepository.save(servingStyle);
@@ -214,21 +224,21 @@ class CustomerGradeUpdateTest {
     @org.junit.jupiter.api.Order(1)
     void testCustomerInfoRetrievalAPI() {
         // 고객 정보 조회 API 호출
-        ResponseEntity<Map<String, Object>> response = memberController.getCustomer(customer.getId());
+        ResponseEntity<com.dinnervery.dto.response.CustomerResponse> response = authController.getCustomer(customer.getId());
         
         // 응답 검증
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        Map<String, Object> responseBody = response.getBody();
+        com.dinnervery.dto.response.CustomerResponse responseBody = response.getBody();
         assertThat(responseBody).isNotNull();
         
         // 고객 정보 검증
         if (responseBody != null) {
-            assertThat(responseBody.get("customerId")).isEqualTo(customer.getId());
-            assertThat(responseBody.get("loginId")).isEqualTo(customer.getLoginId());
-            assertThat(responseBody.get("name")).isEqualTo(customer.getName());
-            assertThat(responseBody.get("phoneNumber")).isEqualTo(customer.getPhoneNumber());
-            assertThat(responseBody.get("grade")).isEqualTo(customer.getGrade().toString());
-            assertThat(responseBody.get("orderCount")).isEqualTo(customer.getOrderCount());
+            assertThat(responseBody.getCustomerId()).isEqualTo(customer.getId());
+            assertThat(responseBody.getLoginId()).isEqualTo(customer.getLoginId());
+            assertThat(responseBody.getName()).isEqualTo(customer.getName());
+            assertThat(responseBody.getPhoneNumber()).isEqualTo(customer.getPhoneNumber());
+            assertThat(responseBody.getGrade()).isEqualTo(customer.getGrade().toString());
+            assertThat(responseBody.getOrderCount()).isEqualTo(customer.getOrderCount());
         }
     }
 

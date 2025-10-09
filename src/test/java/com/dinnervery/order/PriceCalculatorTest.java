@@ -9,6 +9,7 @@ import com.dinnervery.repository.CustomerRepository;
 import com.dinnervery.repository.MenuRepository;
 import com.dinnervery.repository.ServingStyleRepository;
 import com.dinnervery.service.PriceCalculator;
+import com.dinnervery.service.DiscountPolicy;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,9 @@ class PriceCalculatorTest {
 
     @Mock
     private CustomerRepository customerRepository;
+
+    @Mock
+    private DiscountPolicy discountPolicy;
 
     @InjectMocks
     private PriceCalculator priceCalculator;
@@ -83,6 +87,7 @@ class PriceCalculatorTest {
         when(menuRepository.findById(1L)).thenReturn(Optional.of(champagneMenu));
         when(servingStyleRepository.findById(1L)).thenReturn(Optional.of(grandStyle));
         when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+        when(discountPolicy.getMenuPrice(champagneMenu)).thenReturn(90000);
 
         // When
         int totalPrice = priceCalculator.calcOrderTotal(request);
