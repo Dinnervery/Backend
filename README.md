@@ -4,61 +4,32 @@
 
 #### Gradle을 사용한 실행
 
-```bash
-# 의존성 설치 및 빌드 (Linux/Mac)
+# (권장) 의존성 설치, 빌드, 실행을 한번에
+# Windows (CMD/PowerShell)
+.\gradlew.bat clean bootRun
+
+# Linux/Mac
+./gradlew clean bootRun
+
+---
+
+# (참고) 빌드와 실행을 따로 할 경우
+
+# 1. 의존성 설치 및 빌드
+# Windows (CMD/PowerShell)
+.\gradlew.bat build
+
+# Linux/Mac
 ./gradlew build
 
-# 애플리케이션 실행 (Linux/Mac)
+# 2. 애플리케이션 실행
+# Windows (CMD/PowerShell)
+.\gradlew.bat bootRun
+
+# Linux/Mac
 ./gradlew bootRun
 
-# Windows 환경에서는
-# gradlew build
-# gradlew bootRun
-```
 
-### 테스트 실행
-
-```bash
-# 모든 테스트 실행 (Linux/Mac)
-./gradlew test
-
-# 코드 커버리지 포함 테스트 (Linux/Mac)
-./gradlew test jacocoTestReport
-
-# 특정 테스트 클래스 실행 (Linux/Mac)
-./gradlew test --tests "CustomerGradeUpdateTest"
-
-# Windows 환경에서는
-# gradlew test
-# gradlew test jacocoTestReport
-# gradlew test --tests "CustomerGradeUpdateTest"
-```
-
-## 주요 기능
-
-### 🍽️ 주문 관리
-- 주문 생성, 조회, 완료
-- 주문 상태 관리 (REQUESTED → COOKING → COOKED → DELIVERING → DONE)
-- 가격 계산 및 VIP 할인 적용
-- 재주문 기능
-
-### 👥 고객 관리
-- 고객 등록
-- VIP 등급 시스템 (월 15회 이상 주문 시 VIP 등급)
-- VIP 고객 10% 할인 혜택
-
-### 🍴 메뉴 관리
-- 메뉴 목록 조회
-- 서빙 스타일 선택 (추가비용 포함)
-- 메뉴 옵션 관리
-
-### ⏰ 영업시간 관리
-- 영업시간: 15:30 ~ 22:00
-- 라스트오더: 21:30
-- 배송 가능 시간: 16:00 ~ 22:00 (10분 단위)
-
-## VIP 할인 정책
-
-- **등급 기준**: 월 15회 이상 주문 시 VIP 등급
-- **할인 혜택**: VIP 등급 시 상시 10% 할인 적용
-- **초기화**: VIP 시작일로부터 1개월 후 주문수 초기화
+### H2 Console
+http://localhost:8080/h2-console/ 접속
+JDBC URL : jdbc:h2:mem:dinnervery

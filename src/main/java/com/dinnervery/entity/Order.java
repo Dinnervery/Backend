@@ -23,22 +23,15 @@ public class Order extends BaseEntity {
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "address_id", nullable = false)
-    private Address address;
+    @Column(name = "address", nullable = false)
+    private String address;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> orderItems = new ArrayList<>();
 
-    @Column(name = "order_date", nullable = false)
-    private LocalDateTime orderDate;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private Status deliveryStatus = Status.REQUESTED;
-
-    @Column(name = "requested_at", nullable = false)
-    private LocalDateTime requestedAt;
 
     @Column(name = "delivery_time", nullable = false)
     private LocalTime deliveryTime;
@@ -56,25 +49,16 @@ public class Order extends BaseEntity {
     @Column(name = "total_price", nullable = false)
     private int totalPrice;
 
-    @Column(name = "discount_amount")
-    private Integer discountAmount;
-
-    @Column(name = "final_price")
-    private int finalPrice;
-
     @Column(name = "card_number", nullable = false, length = 100)
     private String cardNumber;
 
     @Builder
-    public Order(Customer customer, Address address, String cardNumber, LocalTime deliveryTime) {
+    public Order(Customer customer, String address, String cardNumber, LocalTime deliveryTime) {
         this.customer = customer;
         this.address = address;
         this.cardNumber = cardNumber;
         this.deliveryTime = deliveryTime;
-        this.orderDate = LocalDateTime.now();
-        this.requestedAt = LocalDateTime.now();
         this.totalPrice = 0;
-        this.finalPrice = 0;
     }
 
     public void addOrderItem(OrderItem orderItem) {
@@ -94,12 +78,6 @@ public class Order extends BaseEntity {
         this.totalPrice = this.orderItems.stream()
                 .mapToInt(OrderItem::getItemTotalPrice)
                 .sum();
-        this.finalPrice = this.totalPrice - (this.discountAmount != null ? this.discountAmount : 0);
-    }
-
-    public void setDiscountAmount(int discountAmount) {
-        this.discountAmount = discountAmount;
-        this.finalPrice = this.totalPrice - this.discountAmount;
     }
 
     // 배달 상태 변경 메서드들

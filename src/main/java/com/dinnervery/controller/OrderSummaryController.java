@@ -1,12 +1,12 @@
 package com.dinnervery.controller;
 
-import com.dinnervery.dto.request.OrderSummaryRequest;
+import com.dinnervery.dto.order.request.OrderSummaryRequest;
 import com.dinnervery.entity.Menu;
 import com.dinnervery.entity.MenuOption;
-import com.dinnervery.entity.ServingStyle;
+import com.dinnervery.entity.Style;
 import com.dinnervery.repository.MenuOptionRepository;
 import com.dinnervery.repository.MenuRepository;
-import com.dinnervery.repository.ServingStyleRepository;
+import com.dinnervery.repository.StyleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,7 +24,7 @@ public class OrderSummaryController {
 
     private final MenuRepository menuRepository;
     private final MenuOptionRepository menuOptionRepository;
-    private final ServingStyleRepository servingStyleRepository;
+    private final StyleRepository styleRepository;
 
     // 주문 요약 확인을 위한 주문 요약 조회
     @PostMapping("/order-summary")
@@ -43,10 +43,10 @@ public class OrderSummaryController {
                     
                     Map<String, Object> optionMap = new HashMap<>();
                     optionMap.put("optionId", option.getId());
-                    optionMap.put("name", option.getItemName());
+                    optionMap.put("name", option.getName());
                     optionMap.put("quantity", selectedOption.getQuantity());
-                    optionMap.put("unitPrice", option.getItemPrice());
-                    optionMap.put("total", option.getItemPrice() * selectedOption.getQuantity());
+                    optionMap.put("unitPrice", option.getPrice());
+                    optionMap.put("total", option.getPrice() * selectedOption.getQuantity());
                     return optionMap;
                 })
                 .collect(Collectors.toList());
@@ -64,23 +64,23 @@ public class OrderSummaryController {
         dinnerItems.add(menuData);
         response.put("dinnerItems", dinnerItems);
         
-        // 선택된 서빙 스타일 조회 (선수)
-        ServingStyle servingStyle = servingStyleRepository.findById(request.getServingStyleId())
-                .orElseThrow(() -> new IllegalArgumentException("서빙 스타일을 찾을 수 없습니다: " + request.getServingStyleId()));
+        // 선택된 스타일 조회
+        Style style = styleRepository.findById(request.getStyleId())
+                .orElseThrow(() -> new IllegalArgumentException("스타일을 찾을 수 없습니다: " + request.getStyleId()));
         
         // Style ?�션
-        Map<String, Object> servingStyleData = new HashMap<>();
-        servingStyleData.put("styleId", servingStyle.getId());
-        servingStyleData.put("name", servingStyle.getName());
-        servingStyleData.put("quantity", 1);
-        servingStyleData.put("unitPrice", servingStyle.getExtraPrice());
-        servingStyleData.put("total", servingStyle.getExtraPrice());
-        response.put("servingStyle", servingStyleData);
+        Map<String, Object> styleData = new HashMap<>();
+        styleData.put("styleId", style.getId());
+        styleData.put("name", style.getName());
+        styleData.put("quantity", 1);
+        styleData.put("unitPrice", style.getExtraPrice());
+        styleData.put("total", style.getExtraPrice());
+        response.put("style", styleData);
         
         // 총가격계산
         int totalPrice = menu.getPrice() + 
                 options.stream().mapToInt(option -> (Integer) option.get("total")).sum() + 
-                servingStyle.getExtraPrice();
+                style.getExtraPrice();
         
         response.put("totalPrice", totalPrice);
         

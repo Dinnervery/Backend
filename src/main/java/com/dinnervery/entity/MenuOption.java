@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
+@Table(name = "menu_options")
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,15 +17,23 @@ public class MenuOption extends BaseEntity {
     @JoinColumn(name = "menu_id")
     private Menu menu;
 
-    @Column(name = "item_name", nullable = false)
-    private String itemName;
+    @Column(name = "name", nullable = false)
+    private String name;
 
-    @Column(name = "item_price", nullable = false)
-    private int itemPrice; // option 추가/제거 가격 (원 단위)
+    @Column(name = "price", nullable = false)
+    private int price; // option 추가/제거 가격 (원 단위)
     
     @Column(name = "default_qty", nullable = false)
     @Builder.Default
     private int defaultQty = 1; // 기본 수량
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "storage_item_id")
+    private Storage storageItem;
+
+    @Column(name = "storage_consumption", nullable = false)
+    @Builder.Default
+    private int storageConsumption = 1;
     
     /**
      * 구성품 추가/제거에 따른 추가 비용 계산
@@ -35,7 +44,7 @@ public class MenuOption extends BaseEntity {
         int difference = orderedQty - defaultQty;
         if (difference > 0) {
             // 추가: 추가된 수량만큼 가격추가
-            return difference * itemPrice;
+            return difference * price;
         } else {
             // 제거: 감액 없음 (0원)
             return 0;
@@ -47,7 +56,7 @@ public class MenuOption extends BaseEntity {
      * @param newPrice 새로운 가격
      */
     public void updatePrice(int newPrice) {
-        this.itemPrice = newPrice;
+        this.price = newPrice;
     }
     
     /**
@@ -56,5 +65,13 @@ public class MenuOption extends BaseEntity {
      */
     public void updateDefaultQty(int newDefaultQty) {
         this.defaultQty = newDefaultQty;
+    }
+
+    public void setStorageItem(Storage storage) {
+        this.storageItem = storage;
+    }
+
+    public void setStorageConsumption(int storageConsumption) {
+        this.storageConsumption = storageConsumption;
     }
 }

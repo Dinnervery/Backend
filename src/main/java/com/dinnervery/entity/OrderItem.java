@@ -27,13 +27,13 @@ public class OrderItem extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "serving_style_id", nullable = false)
-    private ServingStyle servingStyle;
+    private Style style;
 
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
     @Column(name = "item_price", nullable = false)
-    private int itemPrice;
+    private int price;
 
     @Column(name = "item_total_price", nullable = false)
     private int itemTotalPrice;
@@ -42,9 +42,12 @@ public class OrderItem extends BaseEntity {
     private List<OrderItemOption> orderItemOptions = new ArrayList<>();
 
     @Builder
-    public OrderItem(Menu menu, ServingStyle servingStyle, Integer quantity) {
+    public OrderItem(Menu menu, Style style, Integer quantity) {
+        if (quantity != null && quantity < 1) {
+            throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
+        }
         this.menu = menu;
-        this.servingStyle = servingStyle;
+        this.style = style;
         this.quantity = quantity;
         // calculateItemPrice()는 addOrderItem에서 호출됨
     }
@@ -54,20 +57,20 @@ public class OrderItem extends BaseEntity {
     }
 
     public void calculateItemPrice() {
-        if (menu == null || servingStyle == null) {
-            return; // menu나 servingStyle이 null이면 계산하지 않음
+        if (menu == null || style == null) {
+            return; // menu나 style이 null이면 계산하지 않음
         }
         
-        // 기본 가격 + 서빙 스타일 추가 가격
-        int basePrice = menu.getPrice() + servingStyle.getExtraPrice();
+        // 기본 가격 + 스타일 추가 가격
+        int basePrice = menu.getPrice() + style.getExtraPrice();
         
         // 옵션 비용 추가
         int optionCost = orderItemOptions.stream()
             .mapToInt(OrderItemOption::calculateExtraCost)
             .sum();
         
-        this.itemPrice = basePrice + optionCost;
-        this.itemTotalPrice = this.itemPrice * quantity;
+        this.price = basePrice + optionCost;
+        this.itemTotalPrice = this.price * quantity;
         
         // Order의 총금액 업데이트
         if (this.order != null) {
@@ -76,6 +79,9 @@ public class OrderItem extends BaseEntity {
     }
 
     public void updateQuantity(Integer newQty) {
+        if (newQty == null || newQty < 1) {
+            throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
+        }
         this.quantity = newQty;
         calculateItemPrice();
     }

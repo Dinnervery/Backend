@@ -1,13 +1,11 @@
 package com.dinnervery.controller;
 
-import com.dinnervery.entity.Customer;
 import com.dinnervery.entity.Menu;
 import com.dinnervery.entity.MenuOption;
-import com.dinnervery.entity.ServingStyle;
-import com.dinnervery.repository.CustomerRepository;
+import com.dinnervery.entity.Style;
 import com.dinnervery.repository.MenuOptionRepository;
 import com.dinnervery.repository.MenuRepository;
-import com.dinnervery.repository.ServingStyleRepository;
+import com.dinnervery.repository.StyleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,8 +22,7 @@ public class MenuController {
 
     private final MenuRepository menuRepository;
     private final MenuOptionRepository menuOptionRepository;
-    private final ServingStyleRepository servingStyleRepository;
-    private final CustomerRepository customerRepository;
+    private final StyleRepository styleRepository;
 
     // 메뉴 목록 조회
     @GetMapping("/menus")
@@ -38,16 +35,6 @@ public class MenuController {
                     menuMap.put("menuId", menu.getId());
                     menuMap.put("name", menu.getName());
                     menuMap.put("price", menu.getPrice());
-                    menuMap.put("description", menu.getDescription());
-                    
-                    // VIP 고객인 경우 할인가 표시
-                    if (customerId != null) {
-                        Customer customer = customerRepository.findById(customerId).orElse(null);
-                        if (customer != null && customer.getGrade() == Customer.CustomerGrade.VIP && customer.isVipDiscountEligible()) {
-                            int discountedPrice = (int) (menu.getPrice() * 0.9); // 10% 할인
-                            menuMap.put("discountedPrice", discountedPrice);
-                        }
-                    }
                     
                     return menuMap;
                 })
@@ -60,18 +47,18 @@ public class MenuController {
     }
 
 
-    // 구성량 변경을 위한 메뉴 옵션 조회
-    @GetMapping("/menus/{menuId}/options/quantity")
-    public ResponseEntity<Map<String, Object>> getMenuOptionsForQuantity(@PathVariable Long menuId) {
+    // 구성품 조회
+    @GetMapping("/menus/{menuId}/options")
+    public ResponseEntity<Map<String, Object>> getMenuOptions(@PathVariable Long menuId) {
         List<MenuOption> options = menuOptionRepository.findByMenu_Id(menuId);
         List<Map<String, Object>> optionList = options.stream()
                 .map(option -> {
                     Map<String, Object> optionMap = new HashMap<>();
                     optionMap.put("optionId", option.getId());
-                    optionMap.put("name", option.getItemName());
-                    optionMap.put("price", option.getItemPrice());
+                    optionMap.put("name", option.getName());
+                    optionMap.put("price", option.getPrice());
                     optionMap.put("defaultQty", option.getDefaultQty());
-                    optionMap.put("currentQty", option.getDefaultQty()); // 현재 선택된 수량
+                    optionMap.put("quantity", option.getDefaultQty()); // 현재 수량(변경O)
                     return optionMap;
                 })
                 .collect(Collectors.toList());
@@ -82,17 +69,17 @@ public class MenuController {
         return ResponseEntity.ok(response);
     }
 
-    // 서빙 스타일 조회 (드라이브 방식 포함)
-    @GetMapping("/serving-styles")
-    public ResponseEntity<Map<String, Object>> getServingStyles() {
-        List<ServingStyle> servingStyles = servingStyleRepository.findAll();
+    // 스타일 조회
+    @GetMapping("/styles")
+    public ResponseEntity<Map<String, Object>> getStyles() {
+        List<Style> styles = styleRepository.findAll();
 
-        List<Map<String, Object>> styleList = servingStyles.stream()
+        List<Map<String, Object>> styleList = styles.stream()
                 .map(style -> {
                     Map<String, Object> styleMap = new HashMap<>();
                     styleMap.put("styleId", style.getId());
                     styleMap.put("name", style.getName());
-                    styleMap.put("extraPrice", style.getExtraPrice());
+                    styleMap.put("price", style.getExtraPrice());
                     return styleMap;
                 })
                 .collect(Collectors.toList());

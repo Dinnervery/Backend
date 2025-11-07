@@ -1,6 +1,6 @@
 package com.dinnervery.service;
 
-import com.dinnervery.dto.MenuDto;
+import com.dinnervery.dto.menu.response.MenuDto;
 import com.dinnervery.entity.Menu;
 import com.dinnervery.repository.MenuRepository;
 import lombok.RequiredArgsConstructor;

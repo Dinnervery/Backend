@@ -1,9 +1,10 @@
 package com.dinnervery.common;
 
-import com.dinnervery.dto.response.ErrorResponse;
+import com.dinnervery.dto.common.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -30,6 +31,14 @@ public class GlobalExceptionHandler {
         
         ErrorResponse error = new ErrorResponse("CONFLICT", e.getMessage());
         
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
+        log.error("DataIntegrityViolationException: {}", e.getMessage());
+        // 주로 유니크 제약 위반 등 스키마 제약 오류 → 409 매핑
+        ErrorResponse error = new ErrorResponse("CONFLICT", "이미 존재하는 계정입니다.");
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 

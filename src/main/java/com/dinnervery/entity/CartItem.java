@@ -24,21 +24,27 @@ public class CartItem extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "serving_style_id", nullable = false)
-    private ServingStyle servingStyle;
+    private Style style;
 
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
     @Column(name = "item_price")
-    private int itemPrice;
+    private int price;
 
     @Column(name = "item_total_price")
     private int itemTotalPrice;
 
+    @OneToMany(mappedBy = "cartItem", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<CartItemOption> cartItemOptions = new java.util.ArrayList<>();
+
     @Builder
-    public CartItem(Menu menu, ServingStyle servingStyle, Integer quantity) {
+    public CartItem(Menu menu, Style style, Integer quantity) {
+        if (quantity != null && quantity < 1) {
+            throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
+        }
         this.menu = menu;
-        this.servingStyle = servingStyle;
+        this.style = style;
         this.quantity = quantity;
         calculateItemPrice();
     }
@@ -47,21 +53,43 @@ public class CartItem extends BaseEntity {
         this.cart = cart;
     }
 
-    public void setServingStyle(ServingStyle servingStyle) {
-        this.servingStyle = servingStyle;
+    public void setStyle(Style style) {
+        this.style = style;
         calculateItemPrice();
     }
 
     public void updateQuantity(Integer newQuantity) {
+        if (newQuantity == null || newQuantity < 1) {
+            throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
+        }
         this.quantity = newQuantity;
         calculateItemPrice();
     }
 
-    private void calculateItemPrice() {
-        // 기본 가격 + 서빙 스타일 추가 가격
-        int basePrice = menu.getPrice() + servingStyle.getExtraPrice();
-        
-        this.itemPrice = basePrice;
-        this.itemTotalPrice = basePrice * quantity;
+    void calculateItemPrice() {
+        int basePrice = menu.getPrice() + style.getExtraPrice();
+        int optionsExtra = 0;
+        for (CartItemOption option : cartItemOptions) {
+            optionsExtra += option.calculateExtraCost();
+        }
+        int unitPrice = basePrice + optionsExtra;
+        this.price = unitPrice;
+        this.itemTotalPrice = unitPrice * quantity;
+    }
+
+    public java.util.List<CartItemOption> getCartItemOptions() {
+        return cartItemOptions;
+    }
+
+    public void addCartItemOption(CartItemOption option) {
+        this.cartItemOptions.add(option);
+        option.setCartItem(this);
+        calculateItemPrice();
+    }
+
+    public void removeCartItemOption(CartItemOption option) {
+        this.cartItemOptions.remove(option);
+        option.setCartItem(null);
+        calculateItemPrice();
     }
 }

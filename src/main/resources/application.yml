@@ -40,3 +40,5 @@ business:
         price: 90000
   customer:
     vip-discount-rate: 10
+data-load:
+  mode: dev

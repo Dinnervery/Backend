@@ -16,18 +16,12 @@ public class Menu extends BaseEntity {
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "description")
-    private String description;
-
     @Column(name = "price", nullable = false)
     private int price;
 
-
-
     @Builder
-    public Menu(String name, String description, int price) {
+    public Menu(String name, int price) {
         this.name = name;
-        this.description = description;
         this.price = price;
     }
 

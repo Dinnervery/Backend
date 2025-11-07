@@ -8,8 +8,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name = "customers")
@@ -29,8 +27,8 @@ public class Customer extends BaseEntity {
     @Column(name = "phone_number", nullable = false)
     private String phoneNumber;
 
-    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Address> addresses = new ArrayList<>();
+    @Column(name = "address", nullable = false)
+    private String address;
 
     @Column(name = "order_count", nullable = false)
     private Integer orderCount = 0;
@@ -43,11 +41,12 @@ public class Customer extends BaseEntity {
     private LocalDate vipStartDate;
 
     @Builder
-    public Customer(String loginId, String password, String name, String phoneNumber) {
+    public Customer(String loginId, String password, String name, String phoneNumber, String address) {
         this.loginId = loginId;
         this.password = password;
         this.name = name;
         this.phoneNumber = phoneNumber;
+        this.address = address;
     }
 
     public void incrementOrderCount() {
@@ -81,14 +80,6 @@ public class Customer extends BaseEntity {
                 this.vipStartDate = null;
             }
         }
-    }
-
-    public boolean isVipDiscountEligible() {
-        // 등급 초기화 체크
-        checkMonthlyReset();
-        
-        // VIP 등급이면 즉시 10% 할인 적용
-        return this.grade == CustomerGrade.VIP;
     }
 
     public enum CustomerGrade {

@@ -1,32 +1,32 @@
 package com.dinnervery.controller;
 
-import com.dinnervery.dto.request.OrderItemCreateRequest;
-import com.dinnervery.dto.order.OrderResponse;
-import com.dinnervery.dto.request.OrderCreateRequest;
-import com.dinnervery.dto.request.OrderPreviewRequest;
-import com.dinnervery.dto.request.PriceCalculationRequest;
-import com.dinnervery.dto.response.OrderPreviewResponse;
-import com.dinnervery.dto.response.PriceCalculationResponse;
-import com.dinnervery.dto.response.OrderListResponse;
-import com.dinnervery.dto.response.DeliveryOrderListResponse;
-import com.dinnervery.dto.response.OrderStatusResponse;
-import com.dinnervery.dto.response.OrderUpdateResponse;
-import com.dinnervery.entity.Address;
+import com.dinnervery.dto.order.response.OrderResponse;
+import com.dinnervery.dto.order.request.OrderCreateRequest;
+import com.dinnervery.dto.order.request.PriceCalculationRequest;
+import com.dinnervery.dto.order.response.OrderPreviewResponse;
+import com.dinnervery.dto.order.response.PriceCalculationResponse;
+import com.dinnervery.dto.order.response.OrderListResponse;
+import com.dinnervery.dto.order.response.DeliveryOrderListResponse;
+import com.dinnervery.dto.order.response.OrderStatusResponse;
+import com.dinnervery.dto.order.response.OrderUpdateResponse;
 import com.dinnervery.entity.Customer;
-import com.dinnervery.repository.AddressRepository;
 import com.dinnervery.repository.CustomerRepository;
 import com.dinnervery.repository.MenuOptionRepository;
 import com.dinnervery.entity.Menu;
 import com.dinnervery.entity.MenuOption;
-import com.dinnervery.entity.ServingStyle;
+import com.dinnervery.entity.Style;
 import com.dinnervery.repository.MenuRepository;
-import com.dinnervery.repository.ServingStyleRepository;
+import com.dinnervery.repository.StyleRepository;
 import com.dinnervery.entity.Order;
 import com.dinnervery.entity.OrderItem;
 import com.dinnervery.entity.OrderItemOption;
-import com.dinnervery.repository.OrderItemRepository;
+import com.dinnervery.entity.Cart;
+import com.dinnervery.entity.CartItem;
+import com.dinnervery.entity.CartItemOption;
 import com.dinnervery.repository.OrderRepository;
+import com.dinnervery.repository.CartRepository;
 import com.dinnervery.service.OrderService;
+import com.dinnervery.service.StorageService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -47,12 +47,12 @@ public class OrderController {
 
     private final OrderService orderService;
     private final OrderRepository orderRepository;
-    private final OrderItemRepository orderItemRepository;
     private final CustomerRepository customerRepository;
-    private final AddressRepository addressRepository;
     private final MenuRepository menuRepository;
-    private final ServingStyleRepository servingStyleRepository;
+    private final StyleRepository styleRepository;
     private final MenuOptionRepository menuOptionRepository;
+    private final CartRepository cartRepository;
+    private final StorageService storageService;
 
     // 가격계산 API
     @PostMapping("/orders/calculate-price")
@@ -67,17 +67,21 @@ public class OrderController {
             Menu menu = menuRepository.findById(item.getMenuId())
                     .orElseThrow(() -> new IllegalArgumentException("메뉴를 찾을 수 없습니다: " + item.getMenuId()));
             
-            ServingStyle servingStyle = servingStyleRepository.findById(item.getServingStyleId())
-                    .orElseThrow(() -> new IllegalArgumentException("서빙 스타일을 찾을 수 없습니다: " + item.getServingStyleId()));
+            Style style = styleRepository.findById(item.getStyleId())
+                    .orElseThrow(() -> new IllegalArgumentException("스타일을 찾을 수 없습니다: " + item.getStyleId()));
             
-            subtotal += (menu.getPrice() + servingStyle.getExtraPrice()) * item.getQuantity();
+            subtotal += (menu.getPrice() + style.getExtraPrice()) * item.getQuantity();
             
-            // 옵션 가격 추가
+            // 옵션 가격 추가 (기본 수량을 초과하는 만큼만 계산)
+            // PriceCalculationRequest는 옵션 수량 정보가 없으므로 기본 수량만 있다고 가정
+            // 기본 수량이면 추가 비용은 0원이므로 이중 계산을 방지
             if (item.getOptionIds() != null) {
                 for (Long optionId : item.getOptionIds()) {
                     MenuOption option = menuOptionRepository.findById(optionId)
                             .orElseThrow(() -> new IllegalArgumentException("옵션을 찾을 수 없습니다: " + optionId));
-                    subtotal += option.getItemPrice() * item.getQuantity();
+                    // 기본 수량만 있다고 가정: calculateExtraCost(기본수량) = 0
+                    // 따라서 추가 비용은 0원 (메뉴 가격에 이미 포함됨)
+                    subtotal += option.calculateExtraCost(option.getDefaultQty()) * item.getQuantity();
                 }
             }
         }
@@ -85,64 +89,64 @@ public class OrderController {
         // 할인 전 총액만 반환 (할인은 프론트엔드에서 처리)
         PriceCalculationResponse response = new PriceCalculationResponse(
                 subtotal,
-                null,
-                subtotal,
-                customer.getGrade().toString(),
-                0
+                customer.getGrade().toString()
         );
         
         return ResponseEntity.ok(response);
     }
 
-    // 주문 미리보기 API (가격계산 + 주문 내역 확인)
-    @PostMapping("/orders/preview")
-    public ResponseEntity<OrderPreviewResponse> previewOrder(@Valid @RequestBody OrderPreviewRequest request) {
+    // 주문 미리보기 API (가격계산 + 주문 내역 확인) - Cart 기반
+    @GetMapping("/cart/{customerId}/preview")
+    public ResponseEntity<OrderPreviewResponse> previewOrder(@PathVariable Long customerId) {
+        // 장바구니 조회
+        Cart cart = cartRepository.findByCustomer_Id(customerId)
+                .orElseThrow(() -> new IllegalArgumentException("장바구니가 비어있습니다. 주문할 상품을 장바구니에 담아주세요."));
+        
+        // 장바구니가 비어있는지 확인
+        if (cart.getCartItems() == null || cart.getCartItems().isEmpty()) {
+            throw new IllegalArgumentException("장바구니가 비어있습니다. 주문할 상품을 장바구니에 담아주세요.");
+        }
+        
         List<OrderPreviewResponse.ItemResponse> itemResponses = new ArrayList<>();
         int itemsTotalPrice = 0;
         
-        // 각 아이템별 처리
-        for (OrderPreviewRequest.ItemRequest itemRequest : request.getItems()) {
-            // 메뉴 조회
-            Menu menu = menuRepository.findById(itemRequest.getMenuId())
-                    .orElseThrow(() -> new IllegalArgumentException("메뉴를 찾을 수 없습니다: " + itemRequest.getMenuId()));
+        // 각 CartItem별 처리
+        for (CartItem cartItem : cart.getCartItems()) {
+            Menu menu = cartItem.getMenu();
+            Style style = cartItem.getStyle();
             
-            // 서빙 스타일 조회 (필수)
-            ServingStyle servingStyle = servingStyleRepository.findById(itemRequest.getServingStyleId())
-                    .orElseThrow(() -> new IllegalArgumentException("서빙 스타일을 찾을 수 없습니다: " + itemRequest.getServingStyleId()));
-            
-            // 아이템 기본 가격 계산 (메뉴 가격 + 서빙 스타일 추가 가격)
-            int basePrice = menu.getPrice() + servingStyle.getExtraPrice();
+            // 아이템 기본 가격 계산 (메뉴 가격 + 스타일 추가 가격)
+            int basePrice = menu.getPrice() + style.getExtraPrice();
             
             // 옵션 처리
             List<OrderPreviewResponse.OptionResponse> optionResponses = new ArrayList<>();
             int optionPrice = 0;
             
-            if (itemRequest.getOptions() != null && !itemRequest.getOptions().isEmpty()) {
-                for (OrderPreviewRequest.OptionRequest optionRequest : itemRequest.getOptions()) {
-                    MenuOption menuOption = menuOptionRepository.findById(optionRequest.getOptionId())
-                            .orElseThrow(() -> new IllegalArgumentException("옵션을 찾을 수 없습니다: " + optionRequest.getOptionId()));
+            if (cartItem.getCartItemOptions() != null && !cartItem.getCartItemOptions().isEmpty()) {
+                for (CartItemOption cartItemOption : cartItem.getCartItemOptions()) {
+                    MenuOption menuOption = cartItemOption.getMenuOption();
                     
                     // 옵션 정보 추가
                     optionResponses.add(new OrderPreviewResponse.OptionResponse(
-                            menuOption.getItemName(),
-                            optionRequest.getQuantity()
+                            menuOption.getName(),
+                            cartItemOption.getQuantity()
                     ));
                     
-                    // 옵션 가격 계산 (옵션 수량 * 옵션 가격)
-                    optionPrice += menuOption.getItemPrice() * optionRequest.getQuantity();
+                    // 옵션 추가 가격 계산 (기본 수량을 초과하는 만큼만 계산)
+                    optionPrice += menuOption.calculateExtraCost(cartItemOption.getQuantity());
                 }
             }
             
             // 아이템 총 가격 계산 (기본 가격 + 옵션 가격) * 수량
-            int itemPrice = (basePrice + optionPrice) * itemRequest.getQuantity();
-            itemsTotalPrice += itemPrice;
+            int price = (basePrice + optionPrice) * cartItem.getQuantity();
+            itemsTotalPrice += price;
             
             // 아이템 응답 생성
             itemResponses.add(new OrderPreviewResponse.ItemResponse(
                     menu.getName(),
-                    itemRequest.getQuantity(),
-                    itemPrice,
-                    servingStyle.getName(),
+                    cartItem.getQuantity(),
+                    price,
+                    style.getName(),
                     optionResponses
             ));
         }
@@ -168,12 +172,12 @@ public class OrderController {
                                     orderItem.getMenu().getId(),
                                     orderItem.getMenu().getName(),
                                     orderItem.getQuantity(),
-                                    orderItem.getServingStyle().getId(),
-                                    orderItem.getServingStyle().getName(),
+                                    orderItem.getStyle().getId(),
+                                    orderItem.getStyle().getName(),
                                     orderItem.getOrderItemOptions().stream().map(opt ->
                                             new OrderListResponse.OrderSummary.OptionSummaryDto(
                                                     opt.getMenuOption().getId(),
-                                                    opt.getMenuOption().getItemName(),
+                                                    opt.getMenuOption().getName(),
                                                     opt.getQuantity()
                                             )
                                     ).collect(java.util.stream.Collectors.toList())
@@ -206,12 +210,12 @@ public class OrderController {
                                     orderItem.getMenu().getId(),
                                     orderItem.getMenu().getName(),
                                     orderItem.getQuantity(),
-                                    orderItem.getServingStyle().getId(),
-                                    orderItem.getServingStyle().getName(),
+                                    orderItem.getStyle().getId(),
+                                    orderItem.getStyle().getName(),
                                     orderItem.getOrderItemOptions().stream().map(opt ->
                                             new DeliveryOrderListResponse.OrderSummary.OptionSummaryDto(
                                                     opt.getMenuOption().getId(),
-                                                    opt.getMenuOption().getItemName(),
+                                                    opt.getMenuOption().getName(),
                                                     opt.getQuantity()
                                             )
                                     ).collect(java.util.stream.Collectors.toList())
@@ -222,7 +226,7 @@ public class OrderController {
                             order.getId(),
                             order.getDeliveryStatus().toString(),
                             order.getDeliveryTime().toString(),
-                            order.getAddress().getAddress(),
+                            order.getAddress(),
                             orderItems
                     );
                 })
@@ -275,15 +279,15 @@ public class OrderController {
                                 itemMap.put("quantity", orderItem.getQuantity());
                                 
                                 // 서빙 스타일명 (예시에서 두 번째 name으로 표시)
-                                if (orderItem.getServingStyle() != null) {
-                                    itemMap.put("styleName", orderItem.getServingStyle().getName());
+                                if (orderItem.getStyle() != null) {
+                                    itemMap.put("styleName", orderItem.getStyle().getName());
                                 }
                                 
                                 // 옵션 목록
                                 List<Map<String, Object>> optionsList = orderItem.getOrderItemOptions().stream()
                                         .map(option -> {
                                             Map<String, Object> optionMap = new HashMap<>();
-                                            optionMap.put("name", option.getMenuOption().getItemName());
+                                            optionMap.put("name", option.getMenuOption().getName());
                                             optionMap.put("quantity", option.getQuantity());
                                             return optionMap;
                                         })
@@ -328,7 +332,32 @@ public class OrderController {
                 order.startCooking();
                 break;
             case "COOKED":
-                order.completeCooking();
+                // 요리 완료 시 재고 확인 및 차감
+                try {
+                    // 주문에 포함된 모든 옵션의 재고 확인
+                    for (OrderItem orderItem : order.getOrderItems()) {
+                        for (OrderItemOption orderItemOption : orderItem.getOrderItemOptions()) {
+                            MenuOption menuOption = orderItemOption.getMenuOption();
+                            int quantity = orderItemOption.getQuantity();
+                            storageService.checkStock(menuOption, quantity);
+                        }
+                    }
+                    
+                    // 재고 확인 성공 시 재고 차감
+                    for (OrderItem orderItem : order.getOrderItems()) {
+                        for (OrderItemOption orderItemOption : orderItem.getOrderItemOptions()) {
+                            MenuOption menuOption = orderItemOption.getMenuOption();
+                            int quantity = orderItemOption.getQuantity();
+                            storageService.deductStock(menuOption, quantity);
+                        }
+                    }
+                    
+                    // 재고 차감 성공 시 주문 상태 변경
+                    order.completeCooking();
+                } catch (IllegalStateException e) {
+                    // 재고 부족 시 409 Conflict 에러 반환
+                    throw new IllegalStateException("재고가 부족하여 요리를 완료할 수 없습니다: " + e.getMessage());
+                }
                 break;
             case "DELIVERING":
                 order.startDelivering();
@@ -369,9 +398,9 @@ public class OrderController {
                 OrderStatusResponse.OrderItemDetail.OptionDetail optionDetail = 
                         new OrderStatusResponse.OrderItemDetail.OptionDetail(
                                 option.getMenuOption().getId(),
-                                option.getMenuOption().getItemName(),
+                                option.getMenuOption().getName(),
                                 option.getQuantity(),
-                                option.getMenuOption().getItemPrice()
+                                option.getMenuOption().getPrice()
                         );
                 options.add(optionDetail);
             }
@@ -382,9 +411,9 @@ public class OrderController {
                             orderItem.getMenu().getName(),
                             orderItem.getQuantity(),
                             orderItem.getMenu().getPrice(),
-                            orderItem.getServingStyle() != null ? orderItem.getServingStyle().getId() : null,
-                            orderItem.getServingStyle() != null ? orderItem.getServingStyle().getName() : null,
-                            orderItem.getServingStyle() != null ? orderItem.getServingStyle().getExtraPrice() : 0,
+                            orderItem.getStyle() != null ? orderItem.getStyle().getId() : null,
+                            orderItem.getStyle() != null ? orderItem.getStyle().getName() : null,
+                            orderItem.getStyle() != null ? orderItem.getStyle().getExtraPrice() : 0,
                             options
                     );
             orderItems.add(itemDetail);
@@ -402,54 +431,6 @@ public class OrderController {
         return ResponseEntity.ok(response);
     }
 
-    // 직접적인 주문 생성 (상세 로직 포함)
-    @PostMapping("/orders/direct")
-    public ResponseEntity<OrderResponse> createOrderDirect(@RequestBody OrderCreateRequest request) {
-        // 1) 메뉴/서빙스타일/옵션 존재 검증
-        validateOrderItems(request);
-
-        // 2) 고객 조회
-        Customer customer = customerRepository.findById(request.getCustomerId())
-                .orElseThrow(() -> new IllegalArgumentException("고객을 찾을 수 없습니다: " + request.getCustomerId()));
-
-        // 주소 조회
-        Address address = addressRepository.findById(request.getAddressId())
-                .orElseThrow(() -> new IllegalArgumentException("주소를 찾을 수 없습니다: " + request.getAddressId()));
-
-        // 3) 주문 생성
-        Order order = Order.builder()
-                .customer(customer)
-                .address(address)
-                .cardNumber(request.getCardNumber())
-                .deliveryTime(request.getDeliveryTime())
-                .build();
-
-        Order savedOrder = orderRepository.save(order);
-
-        // 4) 주문 아이템들 생성
-        for (OrderItemCreateRequest itemRequest : request.getOrderItems()) {
-            Menu menu = menuRepository.findById(itemRequest.getMenuId()).get();
-            ServingStyle servingStyle = servingStyleRepository.findById(itemRequest.getStyleId()).get();
-
-            OrderItem orderItem = OrderItem.builder()
-                    .menu(menu)
-                    .servingStyle(servingStyle)
-                    .quantity(itemRequest.getQuantity())
-                    .build();
-
-            order.addOrderItem(orderItem);
-            orderItemRepository.save(orderItem);
-        }
-
-        // 5) 고객 주문 수 증가 및 등급 업데이트
-        customer.incrementOrderCount();
-        customerRepository.save(customer);
-
-        // 6) 응답 생성
-        OrderResponse response = OrderResponse.from(savedOrder);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
 
     // 주문 상세 정보 조회
     @GetMapping("/orders/detail/{id}")
@@ -486,19 +467,6 @@ public class OrderController {
         return ResponseEntity.ok(response);
     }
 
-    private void validateOrderItems(OrderCreateRequest request) {
-        for (OrderItemCreateRequest itemRequest : request.getOrderItems()) {
-            // 메뉴 존재 검증
-            if (!menuRepository.existsById(itemRequest.getMenuId())) {
-                throw new IllegalArgumentException("메뉴를 찾을 수 없습니다: " + itemRequest.getMenuId());
-            }
-
-            // 서빙 스타일 존재 검증
-            if (!servingStyleRepository.existsById(itemRequest.getStyleId())) {
-                throw new IllegalArgumentException("서빙 스타일을 찾을 수 없습니다: " + itemRequest.getStyleId());
-            }
-        }
-    }
 }
 
 

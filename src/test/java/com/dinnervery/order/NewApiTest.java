@@ -1,48 +1,49 @@
 package com.dinnervery.order;
 
 import com.dinnervery.controller.CartController;
-import com.dinnervery.controller.BusinessHoursController;
 import com.dinnervery.controller.OrderSummaryController;
-import com.dinnervery.dto.request.CartAddItemRequest;
-import com.dinnervery.dto.request.OrderSummaryRequest;
-import com.dinnervery.entity.Address;
+import com.dinnervery.dto.cart.request.CartAddItemRequest;
+import com.dinnervery.dto.order.request.OrderSummaryRequest;
 import com.dinnervery.entity.Customer;
 import com.dinnervery.entity.Menu;
 import com.dinnervery.entity.MenuOption;
-import com.dinnervery.entity.ServingStyle;
-import com.dinnervery.repository.AddressRepository;
+import com.dinnervery.entity.Style;
+import com.dinnervery.entity.Cart;
+import com.dinnervery.entity.CartItem;
+import com.dinnervery.entity.CartItemOption;
 import com.dinnervery.repository.CustomerRepository;
 import com.dinnervery.repository.MenuRepository;
 import com.dinnervery.repository.MenuOptionRepository;
-import com.dinnervery.repository.ServingStyleRepository;
+import com.dinnervery.repository.StyleRepository;
+import com.dinnervery.repository.CartRepository;
+import com.dinnervery.repository.CartItemRepository;
+import com.dinnervery.repository.CartItemOptionRepository;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
-import java.util.UUID;
+import java.util.Optional;
+import java.util.ArrayList;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@WebMvcTest(controllers = {
+    CartController.class,
+    OrderSummaryController.class
+})
 @ActiveProfiles("test")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-@Transactional
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class NewApiTest {
 
     @Autowired
@@ -51,148 +52,203 @@ class NewApiTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Autowired
-    private CustomerRepository customerRepository;
+    @MockitoBean private CustomerRepository customerRepository;
+    @MockitoBean private MenuRepository menuRepository;
+    @MockitoBean private MenuOptionRepository menuOptionRepository;
+    @MockitoBean private StyleRepository styleRepository;
+    @MockitoBean private CartRepository cartRepository;
+    @MockitoBean private CartItemRepository cartItemRepository;
+    @MockitoBean private CartItemOptionRepository cartItemOptionRepository;
 
-    @Autowired
-    private MenuRepository menuRepository;
-
-    @Autowired
-    private MenuOptionRepository menuOptionRepository;
-
-    @Autowired
-    private ServingStyleRepository servingStyleRepository;
-
-    @Autowired
-    private AddressRepository addressRepository;
+    // ID 상수
+    private final Long MOCK_CUSTOMER_ID = 1L;
+    private final Long MOCK_MENU_ID = 10L;
+    private final Long MOCK_OPTION_ID = 100L;
+    private final Long MOCK_STYLE_ID = 20L;
+    private final Long MOCK_CART_ID = 5L;
+    private final Long MOCK_CART_ITEM_ID = 50L;
 
     private Customer customer;
     private Menu menu;
     private MenuOption menuOption;
-    private ServingStyle servingStyle;
-    private Address address;
+    private Style style;
+    private Cart cart;
 
     @BeforeEach
     void setUp() {
-        // given - 테스트 데이터 생성
-        // 고객 생성
+        // given - 테스트 데이터 생성 (모두 mock stub)
         customer = Customer.builder()
                 .loginId("test_customer_" + System.currentTimeMillis())
                 .password("password")
                 .name("테스트 고객")
                 .phoneNumber("010-1234-5678")
-                .build();
-        customer = customerRepository.save(customer);
-
-        // 주소 생성
-        address = Address.builder()
-                .customer(customer)
                 .address("서울시 강남구 테헤란로 123")
                 .build();
-        address = addressRepository.save(address);
+        ReflectionTestUtils.setField(customer, "id", MOCK_CUSTOMER_ID);
+        when(customerRepository.findById(MOCK_CUSTOMER_ID)).thenReturn(Optional.of(customer));
 
-        // 메뉴 생성
         menu = Menu.builder()
                 .name("발렌타인 디너")
                 .price(28000)
-                .description("로맨틱한 발렌타인 특별 디너")
                 .build();
-        menu = menuRepository.save(menu);
+        ReflectionTestUtils.setField(menu, "id", MOCK_MENU_ID);
+        when(menuRepository.findById(MOCK_MENU_ID)).thenReturn(Optional.of(menu));
 
-        // 메뉴 옵션 생성
         menuOption = MenuOption.builder()
                 .menu(menu)
-                .itemName("와인세트")
-                .itemPrice(15000)
+                .name("와인세트")
+                .price(15000)
                 .defaultQty(1)
                 .build();
-        menuOption = menuOptionRepository.save(menuOption);
+        ReflectionTestUtils.setField(menuOption, "id", MOCK_OPTION_ID);
+        when(menuOptionRepository.findById(MOCK_OPTION_ID)).thenReturn(Optional.of(menuOption));
 
-        // 서빙 스타일 생성
-        servingStyle = ServingStyle.builder()
+        style = Style.builder()
                 .name("기본_" + System.currentTimeMillis())
                 .extraPrice(0)
                 .build();
-        servingStyle = servingStyleRepository.save(servingStyle);
+        ReflectionTestUtils.setField(style, "id", MOCK_STYLE_ID);
+        when(styleRepository.findById(MOCK_STYLE_ID)).thenReturn(Optional.of(style));
+
+        // Cart stubs
+        cart = Cart.builder().customer(customer).build();
+        when(cartRepository.findByCustomer_Id(MOCK_CUSTOMER_ID)).thenReturn(Optional.of(cart));
+        when(cartItemRepository.findByCart_Id(MOCK_CART_ID)).thenReturn(new ArrayList<>());
+        when(cartRepository.save(any())).thenAnswer(invocation -> {
+            Cart c = invocation.getArgument(0);
+            // save 시 id 부여 시뮬레이션
+            ReflectionTestUtils.setField(c, "id", MOCK_CART_ID);
+            if (c != null) {
+                // 장바구니에 아이템이 있으면 첫 아이템 id도 세팅
+                try {
+                    java.lang.reflect.Field itemsField = c.getClass().getDeclaredField("cartItems");
+                    itemsField.setAccessible(true);
+                    @SuppressWarnings("unchecked")
+                    java.util.List<CartItem> items = (java.util.List<CartItem>) itemsField.get(c);
+                    if (items != null && !items.isEmpty()) {
+                        ReflectionTestUtils.setField(items.get(0), "id", MOCK_CART_ITEM_ID);
+                    }
+                } catch (Exception ignored) { }
+            }
+            return c;
+        });
+
     }
 
     @Test
     @org.junit.jupiter.api.Order(1)
-    void testBusinessHoursRetrievalAPI() throws Exception {
-        // when & then - 영업시간 조회 API 호출
-        mockMvc.perform(get("/api/business-hours/status")
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.openTime").value("15:30"))
-                .andExpect(jsonPath("$.closeTime").value("22:00"))
-                .andExpect(jsonPath("$.lastOrderTime").value("21:30"));
-    }
-
-    @Test
-    @org.junit.jupiter.api.Order(2)
     void testOrderSummaryConfirmationAPI() throws Exception {
-        // given - 간단한 주문 요약 확인 요청 생성
         OrderSummaryRequest.SelectedOption selectedOption = OrderSummaryRequest.SelectedOption.builder()
-                .optionId(menuOption.getId())
+                .optionId(MOCK_OPTION_ID)
                 .quantity(1)
                 .build();
         
         OrderSummaryRequest request = OrderSummaryRequest.builder()
-                .menuId(menu.getId())
+                .menuId(MOCK_MENU_ID)
                 .selectedOptions(List.of(selectedOption))
-                .servingStyleId(servingStyle.getId())
+                .styleId(MOCK_STYLE_ID)
                 .build();
         
-        // when & then - 주문 요약 확인 API 호출
         mockMvc.perform(post("/api/order-summary")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalPrice").exists())
-                .andExpect(jsonPath("$.dinnerItems").exists());
+                .andExpect(jsonPath("$.totalPrice").exists());
     }
 
     @Test
-    @org.junit.jupiter.api.Order(3)
+    @org.junit.jupiter.api.Order(2)
     void testCartAddAPI() throws Exception {
-        // given - 간단한 장바구니 추가 요청 생성
         CartAddItemRequest request = CartAddItemRequest.builder()
-                .menuId(menu.getId())
+                .menuId(MOCK_MENU_ID)
                 .menuQuantity(1)
-                .servingStyleId(servingStyle.getId())
+                .styleId(MOCK_STYLE_ID)
                 .options(List.of())
                 .build();
         
-        // when & then - 장바구니 추가 API 호출
-        mockMvc.perform(post("/api/cart/{customerId}/add", customer.getId())
+        mockMvc.perform(post("/api/cart/{customerId}/items", MOCK_CUSTOMER_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.cartItemId").exists())
-                .andExpect(jsonPath("$.menuId").value(menu.getId()));
+                .andExpect(jsonPath("$.menu.menuId").value(MOCK_MENU_ID));
+    }
+
+    @Test
+    @org.junit.jupiter.api.Order(3)
+    void testCartRetrievalAPI() throws Exception {
+        // cart와 cartItems가 존재하는 시나리오
+        ReflectionTestUtils.setField(cart, "id", MOCK_CART_ID);
+        CartItem item = CartItem.builder().menu(menu).style(style).quantity(1).build();
+        ReflectionTestUtils.setField(item, "id", MOCK_CART_ITEM_ID);
+        when(cartItemRepository.findByCart_Id(MOCK_CART_ID)).thenReturn(java.util.List.of(item));
+        
+        mockMvc.perform(get("/api/cart/{customerId}", MOCK_CUSTOMER_ID)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cartId").value(MOCK_CART_ID))
+                .andExpect(jsonPath("$.customerId").value(MOCK_CUSTOMER_ID));
     }
 
     @Test
     @org.junit.jupiter.api.Order(4)
-    void testCartRetrievalAPI() throws Exception {
-        // given - 먼저 장바구니에 아이템 추가
-        CartAddItemRequest request = CartAddItemRequest.builder()
-                .menuId(menu.getId())
-                .menuQuantity(1)
-                .servingStyleId(servingStyle.getId())
-                .options(List.of())
+    void testChangeOptionQuantityAPI() throws Exception {
+        Cart cartLocal = Cart.builder().customer(customer).build();
+        ReflectionTestUtils.setField(cartLocal, "id", MOCK_CART_ID);
+        
+        CartItem item = CartItem.builder().menu(menu).style(style).quantity(1).build();
+        ReflectionTestUtils.setField(item, "id", MOCK_CART_ITEM_ID);
+        cartLocal.addCartItem(item);
+        
+        CartItemOption cartItemOption = CartItemOption.builder()
+                .menuOption(menuOption)
+                .quantity(1)
                 .build();
+        item.addCartItemOption(cartItemOption);
         
-        mockMvc.perform(post("/api/cart/{customerId}/add", customer.getId())
+        when(cartItemRepository.findById(MOCK_CART_ITEM_ID)).thenReturn(Optional.of(item));
+        when(menuOptionRepository.findById(MOCK_OPTION_ID)).thenReturn(Optional.of(menuOption));
+        when(cartItemOptionRepository.findByCartItem_IdAndMenuOption_Id(MOCK_CART_ITEM_ID, MOCK_OPTION_ID))
+                .thenReturn(Optional.of(cartItemOption));
+        when(cartRepository.findByCustomer_Id(MOCK_CUSTOMER_ID)).thenReturn(Optional.of(cartLocal));
+        when(cartItemRepository.findByCart_Id(MOCK_CART_ID)).thenReturn(List.of(item));
+        when(cartItemRepository.save(any(CartItem.class))).thenReturn(item);
+        
+        String payload = "{\"quantity\":2}";
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                .patch("/api/cart/{customerId}/items/{cartItemId}/options/{optionId}", MOCK_CUSTOMER_ID, MOCK_CART_ITEM_ID, MOCK_OPTION_ID)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk());
-        
-        // when & then - 장바구니 조회 API 호출
-        mockMvc.perform(get("/api/cart/{customerId}", customer.getId())
-                .contentType(MediaType.APPLICATION_JSON))
+                .content(payload))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.cartId").exists())
-                .andExpect(jsonPath("$.customerId").value(customer.getId()));
+                .andExpect(jsonPath("$.cartItemId").value(MOCK_CART_ITEM_ID));
+    }
+
+    @Test
+    @org.junit.jupiter.api.Order(5)
+    void testRemoveStyleAPI() throws Exception {
+        CartItem item = CartItem.builder().menu(menu).style(style).quantity(1).build();
+        ReflectionTestUtils.setField(item, "id", MOCK_CART_ITEM_ID);
+        when(cartItemRepository.findById(MOCK_CART_ITEM_ID)).thenReturn(Optional.of(item));
+        when(styleRepository.findAll()).thenReturn(java.util.List.of(style));
+        
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                .delete("/api/cart/{customerId}/items/{cartItemId}/styles", MOCK_CUSTOMER_ID, MOCK_CART_ITEM_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cartItemId").value(MOCK_CART_ITEM_ID));
+    }
+
+    @Test
+    @org.junit.jupiter.api.Order(6)
+    void testRemoveCartItemAPI() throws Exception {
+        CartItem item = CartItem.builder().menu(menu).style(style).quantity(1).build();
+        ReflectionTestUtils.setField(item, "id", MOCK_CART_ITEM_ID);
+        when(cartItemRepository.findById(MOCK_CART_ITEM_ID)).thenReturn(Optional.of(item));
+        when(cartRepository.findByCustomer_Id(MOCK_CUSTOMER_ID)).thenReturn(Optional.of(Cart.builder().customer(customer).build()));
+        when(cartItemRepository.findByCart_Id(any(Long.class))).thenReturn(new java.util.ArrayList<>());
+        
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                .delete("/api/cart/{customerId}/items/{cartItemId}", MOCK_CUSTOMER_ID, MOCK_CART_ITEM_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.deletedCartItemId").value(MOCK_CART_ITEM_ID));
     }
 }

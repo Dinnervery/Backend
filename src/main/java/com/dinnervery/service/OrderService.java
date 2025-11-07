@@ -1,15 +1,11 @@
 package com.dinnervery.service;
 
-import com.dinnervery.dto.order.OrderResponse;
-import com.dinnervery.dto.request.OrderCreateRequest;
-import com.dinnervery.dto.request.OrderItemCreateRequest;
+import com.dinnervery.dto.order.response.OrderResponse;
+import com.dinnervery.dto.order.request.OrderCreateRequest;
 import com.dinnervery.entity.*;
-import com.dinnervery.repository.AddressRepository;
+import com.dinnervery.repository.CartRepository;
 import com.dinnervery.repository.CustomerRepository;
-import com.dinnervery.repository.MenuRepository;
-import com.dinnervery.repository.MenuOptionRepository;
 import com.dinnervery.repository.OrderRepository;
-import com.dinnervery.repository.ServingStyleRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,11 +21,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final CustomerRepository customerRepository;
-    private final MenuRepository menuRepository;
-    private final AddressRepository addressRepository;
-    private final ServingStyleRepository servingStyleRepository;
-    private final MenuOptionRepository menuOptionRepository;
-    private final StorageService storageService;
+    private final CartRepository cartRepository;
 
     @Transactional
     public OrderResponse createOrder(OrderCreateRequest request) {
@@ -37,75 +29,49 @@ public class OrderService {
         Customer customer = customerRepository.findById(request.getCustomerId())
                 .orElseThrow(() -> new IllegalArgumentException("고객을 찾을 수 없습니다: " + request.getCustomerId()));
 
-        // 주소 조회
-        Address address = addressRepository.findById(request.getAddressId())
-                .orElseThrow(() -> new IllegalArgumentException("주소를 찾을 수 없습니다: " + request.getAddressId()));
+        // 장바구니 조회
+        Cart cart = cartRepository.findByCustomer_Id(request.getCustomerId())
+                .orElseThrow(() -> new IllegalArgumentException("장바구니가 비어있습니다. 주문할 상품을 장바구니에 담아주세요."));
+
+        // 장바구니가 비어있는지 확인
+        if (cart.getCartItems() == null || cart.getCartItems().isEmpty()) {
+            throw new IllegalArgumentException("장바구니가 비어있습니다. 주문할 상품을 장바구니에 담아주세요.");
+        }
 
         // 주문 생성
         Order order = Order.builder()
                 .customer(customer)
-                .address(address)
+                .address(request.getAddress())
                 .cardNumber(request.getCardNumber())
                 .deliveryTime(request.getDeliveryTime())
                 .build();
 
-        // 재고 확인 (save 이전)
-        if (request.getOrderItems() != null) {
-            for (OrderItemCreateRequest itemRequest : request.getOrderItems()) {
-                if (itemRequest.getOptions() != null) {
-                    for (OrderItemCreateRequest.OptionRequest optReq : itemRequest.getOptions()) {
-                        MenuOption menuOption = menuOptionRepository.findById(optReq.getOptionId())
-                                .orElseThrow(() -> new IllegalArgumentException("옵션을 찾을 수 없습니다: " + optReq.getOptionId()));
-                        storageService.checkStock(menuOption, optReq.getQuantity());
-                    }
-                }
-            }
-        }
-
-        // 주문 아이템들 추가
-        for (OrderItemCreateRequest itemRequest : request.getOrderItems()) {
-            Menu menu = menuRepository.findById(itemRequest.getMenuId())
-                    .orElseThrow(() -> new IllegalArgumentException("메뉴를 찾을 수 없습니다: " + itemRequest.getMenuId()));
-            
-            ServingStyle servingStyle = servingStyleRepository.findById(itemRequest.getStyleId())
-                    .orElseThrow(() -> new IllegalArgumentException("서빙 스타일을 찾을 수 없습니다: " + itemRequest.getStyleId()));
-
+        // 장바구니 아이템들을 주문 아이템으로 복사
+        for (CartItem cartItem : cart.getCartItems()) {
+            // OrderItem 생성 (CartItem에서 복사)
             OrderItem orderItem = OrderItem.builder()
-                    .menu(menu)
-                    .servingStyle(servingStyle)
-                    .quantity(itemRequest.getQuantity())
+                    .menu(cartItem.getMenu())
+                    .style(cartItem.getStyle())
+                    .quantity(cartItem.getQuantity())
                     .build();
 
-            // 옵션 매핑
-            if (itemRequest.getOptions() != null && !itemRequest.getOptions().isEmpty()) {
-                for (OrderItemCreateRequest.OptionRequest optReq : itemRequest.getOptions()) {
-                    MenuOption menuOption = menuOptionRepository.findById(optReq.getOptionId())
-                            .orElseThrow(() -> new IllegalArgumentException("옵션을 찾을 수 없습니다: " + optReq.getOptionId()));
-                    OrderItemOption orderItemOption = OrderItemOption.builder()
-                            .menuOption(menuOption)
-                            .quantity(optReq.getQuantity())
-                            .build();
-                    orderItem.addOrderItemOption(orderItemOption);
-                }
+            // CartItemOption들을 OrderItemOption으로 복사
+            for (CartItemOption cartItemOption : cartItem.getCartItemOptions()) {
+                OrderItemOption orderItemOption = OrderItemOption.builder()
+                        .menuOption(cartItemOption.getMenuOption())
+                        .quantity(cartItemOption.getQuantity())
+                        .build();
+                orderItem.addOrderItemOption(orderItemOption);
             }
 
             order.addOrderItem(orderItem);
         }
 
+        // 주문 저장
         Order savedOrder = orderRepository.save(order);
 
-        // 재고 차감 (save 이후)
-        if (request.getOrderItems() != null) {
-            for (OrderItemCreateRequest itemRequest : request.getOrderItems()) {
-                if (itemRequest.getOptions() != null) {
-                    for (OrderItemCreateRequest.OptionRequest optReq : itemRequest.getOptions()) {
-                        MenuOption menuOption = menuOptionRepository.findById(optReq.getOptionId())
-                                .orElseThrow(() -> new IllegalArgumentException("옵션을 찾을 수 없습니다: " + optReq.getOptionId()));
-                        storageService.deductStock(menuOption, optReq.getQuantity());
-                    }
-                }
-            }
-        }
+        // 장바구니 비우기 (CartItem들이 cascade로 삭제됨)
+        cartRepository.delete(cart);
         
         return OrderResponse.from(savedOrder);
     }

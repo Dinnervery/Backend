@@ -1,14 +1,15 @@
 package com.dinnervery.controller;
 
-import com.dinnervery.dto.member.SignupRequest;
-import com.dinnervery.dto.member.LoginRequest;
-import com.dinnervery.dto.response.AuthResponse;
-import com.dinnervery.dto.response.EmployeeAuthResponse;
-import com.dinnervery.dto.response.CustomerResponse;
+import com.dinnervery.dto.auth.request.SignupRequest;
+import com.dinnervery.dto.auth.request.LoginRequest;
+import com.dinnervery.dto.auth.response.AuthResponse;
+import com.dinnervery.dto.auth.response.LoginResponse;
+import com.dinnervery.dto.auth.response.StaffAuthResponse;
+import com.dinnervery.dto.customer.response.CustomerResponse;
 import com.dinnervery.entity.Customer;
-import com.dinnervery.entity.Employee;
+import com.dinnervery.entity.Staff;
 import com.dinnervery.repository.CustomerRepository;
-import com.dinnervery.repository.EmployeeRepository;
+import com.dinnervery.repository.StaffRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,13 +20,13 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final CustomerRepository customerRepository;
-    private final EmployeeRepository employeeRepository;
+    private final StaffRepository staffRepository;
 
     @PostMapping("/customer/signup")
     public ResponseEntity<AuthResponse> customerSignup(@RequestBody SignupRequest request) {
         // 중복 검증
         if (customerRepository.existsByLoginId(request.getLoginId())) {
-            throw new IllegalArgumentException("이미 존재하는 로그인 ID입니다: " + request.getLoginId());
+            throw new IllegalStateException("이미 존재하는 계정입니다.");
         }
 
         // 고객 생성
@@ -34,6 +35,7 @@ public class AuthController {
                 .password(request.getPassword())
                 .name(request.getName())
                 .phoneNumber(request.getPhoneNumber())
+                .address(request.getAddress())
                 .build();
 
         Customer savedCustomer = customerRepository.save(customer);
@@ -43,6 +45,7 @@ public class AuthController {
                 savedCustomer.getLoginId(),
                 savedCustomer.getName(),
                 savedCustomer.getPhoneNumber(),
+                savedCustomer.getAddress(),
                 savedCustomer.getGrade().toString(),
                 "eyJhbGciOiJIUzI1NiIs..." // 실제로는 JWT 토큰 생성
         );
@@ -51,7 +54,7 @@ public class AuthController {
     }
 
     @PostMapping("/customer/login")
-    public ResponseEntity<AuthResponse> customerLogin(@RequestBody LoginRequest request) {
+    public ResponseEntity<LoginResponse> customerLogin(@RequestBody LoginRequest request) {
         Customer customer = customerRepository.findByLoginId(request.getLoginId())
                 .orElseThrow(() -> new IllegalArgumentException("로그인에 실패했습니다"));
 
@@ -59,11 +62,10 @@ public class AuthController {
             throw new IllegalArgumentException("로그인에 실패했습니다");
         }
 
-        AuthResponse response = new AuthResponse(
+        LoginResponse response = new LoginResponse(
                 customer.getId(),
                 customer.getLoginId(),
                 customer.getName(),
-                customer.getPhoneNumber(),
                 customer.getGrade().toString(),
                 "eyJhbGciOiJIUzI1NiIs..." // 실제로는 JWT 토큰 생성
         );
@@ -71,20 +73,20 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/employee/login")
-    public ResponseEntity<EmployeeAuthResponse> employeeLogin(@RequestBody LoginRequest request) {
-        Employee employee = employeeRepository.findByLoginId(request.getLoginId())
+    @PostMapping("/staff/login")
+    public ResponseEntity<StaffAuthResponse> staffLogin(@RequestBody LoginRequest request) {
+        Staff staff = staffRepository.findByLoginId(request.getLoginId())
                 .orElseThrow(() -> new IllegalArgumentException("로그인에 실패했습니다"));
 
-        if (!employee.getPassword().equals(request.getPassword())) {
+        if (!staff.getPassword().equals(request.getPassword())) {
             throw new IllegalArgumentException("로그인에 실패했습니다");
         }
 
-        EmployeeAuthResponse response = new EmployeeAuthResponse(
-                employee.getId(),
-                employee.getLoginId(),
-                employee.getName(),
-                employee.getTask().toString(),
+        StaffAuthResponse response = new StaffAuthResponse(
+                staff.getId(),
+                staff.getLoginId(),
+                staff.getName(),
+                staff.getTask().toString(),
                 "eyJhbGciOiJIUzI1NiIs..." // 실제로는 JWT 토큰 생성
         );
 

@@ -27,6 +27,9 @@ public class OrderItemOption extends BaseEntity {
 
     @Builder
     public OrderItemOption(MenuOption menuOption, Integer quantity) {
+        if (quantity != null && quantity < 1) {
+            throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
+        }
         this.menuOption = menuOption;
         this.quantity = quantity;
     }
@@ -39,6 +42,9 @@ public class OrderItemOption extends BaseEntity {
     }
 
     public void updateQuantity(Integer newQuantity) {
+        if (newQuantity == null || newQuantity < 1) {
+            throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
+        }
         this.quantity = newQuantity;
         if (this.orderItem != null) {
             this.orderItem.calculateItemPrice();
