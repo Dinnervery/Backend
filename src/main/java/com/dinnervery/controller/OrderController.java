@@ -1,7 +1,6 @@
 package com.dinnervery.controller;
 
 import com.dinnervery.dto.order.response.OrderResponse;
-import com.dinnervery.dto.order.request.OrderCreateRequest;
 import com.dinnervery.dto.order.request.PriceCalculationRequest;
 import com.dinnervery.dto.order.response.OrderPreviewResponse;
 import com.dinnervery.dto.order.response.PriceCalculationResponse;
@@ -28,9 +27,7 @@ import com.dinnervery.repository.CartRepository;
 import com.dinnervery.service.OrderService;
 import com.dinnervery.service.StorageService;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -235,13 +232,6 @@ public class OrderController {
         DeliveryOrderListResponse response = new DeliveryOrderListResponse(orderList);
         
         return ResponseEntity.ok(response);
-    }
-
-    // 관리자용 주문 관리(상세 API 응답)
-    @PostMapping("/orders")
-    public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody OrderCreateRequest request) {
-        OrderResponse response = orderService.createOrder(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/orders/{id}")
