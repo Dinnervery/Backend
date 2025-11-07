@@ -1,13 +1,14 @@
 package com.dinnervery.controller;
 
-import com.dinnervery.dto.OrderDto;
 import com.dinnervery.dto.request.OrderItemCreateRequest;
 import com.dinnervery.dto.order.OrderResponse;
 import com.dinnervery.dto.request.OrderCreateRequest;
+import com.dinnervery.dto.request.OrderPreviewRequest;
 import com.dinnervery.dto.request.PriceCalculationRequest;
-import com.dinnervery.dto.request.ReorderRequest;
+import com.dinnervery.dto.response.OrderPreviewResponse;
 import com.dinnervery.dto.response.PriceCalculationResponse;
 import com.dinnervery.dto.response.OrderListResponse;
+import com.dinnervery.dto.response.DeliveryOrderListResponse;
 import com.dinnervery.dto.response.OrderStatusResponse;
 import com.dinnervery.dto.response.OrderUpdateResponse;
 import com.dinnervery.entity.Address;
@@ -26,7 +27,6 @@ import com.dinnervery.entity.OrderItemOption;
 import com.dinnervery.repository.OrderItemRepository;
 import com.dinnervery.repository.OrderRepository;
 import com.dinnervery.service.OrderService;
-import com.dinnervery.service.EmployeeAvailabilityService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +34,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -54,7 +53,6 @@ public class OrderController {
     private final MenuRepository menuRepository;
     private final ServingStyleRepository servingStyleRepository;
     private final MenuOptionRepository menuOptionRepository;
-    private final EmployeeAvailabilityService employeeAvailabilityService;
 
     // 가격계산 API
     @PostMapping("/orders/calculate-price")
@@ -63,7 +61,7 @@ public class OrderController {
         Customer customer = customerRepository.findById(request.getCustomerId())
                 .orElseThrow(() -> new IllegalArgumentException("고객을 찾을 수 없습니다: " + request.getCustomerId()));
         
-        // 고객별 할인 계산
+        // 총액 계산
         int subtotal = 0;
         for (PriceCalculationRequest.OrderItemRequest item : request.getItems()) {
             Menu menu = menuRepository.findById(item.getMenuId())
@@ -84,23 +82,75 @@ public class OrderController {
             }
         }
         
-        // VIP 고객 할인
-        int discountAmount = 0;
-        int finalPrice = subtotal;
-        int discountRate = 0;
-        
-        if (customer.getGrade() == Customer.CustomerGrade.VIP && customer.isVipDiscountEligible()) {
-            discountRate = 10;
-            discountAmount = (int) (subtotal * 0.1);
-            finalPrice = subtotal - discountAmount;
-        }
-        
+        // 할인 전 총액만 반환 (할인은 프론트엔드에서 처리)
         PriceCalculationResponse response = new PriceCalculationResponse(
                 subtotal,
-                discountAmount > 0 ? discountAmount : null,
-                finalPrice,
+                null,
+                subtotal,
                 customer.getGrade().toString(),
-                discountRate
+                0
+        );
+        
+        return ResponseEntity.ok(response);
+    }
+
+    // 주문 미리보기 API (가격계산 + 주문 내역 확인)
+    @PostMapping("/orders/preview")
+    public ResponseEntity<OrderPreviewResponse> previewOrder(@Valid @RequestBody OrderPreviewRequest request) {
+        List<OrderPreviewResponse.ItemResponse> itemResponses = new ArrayList<>();
+        int itemsTotalPrice = 0;
+        
+        // 각 아이템별 처리
+        for (OrderPreviewRequest.ItemRequest itemRequest : request.getItems()) {
+            // 메뉴 조회
+            Menu menu = menuRepository.findById(itemRequest.getMenuId())
+                    .orElseThrow(() -> new IllegalArgumentException("메뉴를 찾을 수 없습니다: " + itemRequest.getMenuId()));
+            
+            // 서빙 스타일 조회 (필수)
+            ServingStyle servingStyle = servingStyleRepository.findById(itemRequest.getServingStyleId())
+                    .orElseThrow(() -> new IllegalArgumentException("서빙 스타일을 찾을 수 없습니다: " + itemRequest.getServingStyleId()));
+            
+            // 아이템 기본 가격 계산 (메뉴 가격 + 서빙 스타일 추가 가격)
+            int basePrice = menu.getPrice() + servingStyle.getExtraPrice();
+            
+            // 옵션 처리
+            List<OrderPreviewResponse.OptionResponse> optionResponses = new ArrayList<>();
+            int optionPrice = 0;
+            
+            if (itemRequest.getOptions() != null && !itemRequest.getOptions().isEmpty()) {
+                for (OrderPreviewRequest.OptionRequest optionRequest : itemRequest.getOptions()) {
+                    MenuOption menuOption = menuOptionRepository.findById(optionRequest.getOptionId())
+                            .orElseThrow(() -> new IllegalArgumentException("옵션을 찾을 수 없습니다: " + optionRequest.getOptionId()));
+                    
+                    // 옵션 정보 추가
+                    optionResponses.add(new OrderPreviewResponse.OptionResponse(
+                            menuOption.getItemName(),
+                            optionRequest.getQuantity()
+                    ));
+                    
+                    // 옵션 가격 계산 (옵션 수량 * 옵션 가격)
+                    optionPrice += menuOption.getItemPrice() * optionRequest.getQuantity();
+                }
+            }
+            
+            // 아이템 총 가격 계산 (기본 가격 + 옵션 가격) * 수량
+            int itemPrice = (basePrice + optionPrice) * itemRequest.getQuantity();
+            itemsTotalPrice += itemPrice;
+            
+            // 아이템 응답 생성
+            itemResponses.add(new OrderPreviewResponse.ItemResponse(
+                    menu.getName(),
+                    itemRequest.getQuantity(),
+                    itemPrice,
+                    servingStyle.getName(),
+                    optionResponses
+            ));
+        }
+        
+        // 응답 생성
+        OrderPreviewResponse response = new OrderPreviewResponse(
+                itemResponses,
+                itemsTotalPrice
         );
         
         return ResponseEntity.ok(response);
@@ -110,7 +160,7 @@ public class OrderController {
     @GetMapping("/orders/cooking")
     public ResponseEntity<OrderListResponse> getCookingOrders() {
         List<Order> orders = orderRepository.findByDeliveryStatusIn(List.of(Order.Status.REQUESTED, Order.Status.COOKING));
-        
+
         List<OrderListResponse.OrderSummary> orderList = orders.stream()
                 .map(order -> {
                     List<OrderListResponse.OrderSummary.OrderedItem> orderedItems = order.getOrderItems().stream()
@@ -120,7 +170,13 @@ public class OrderController {
                                     orderItem.getQuantity(),
                                     orderItem.getServingStyle().getId(),
                                     orderItem.getServingStyle().getName(),
-                                    List.of() // 현재는 빈 리스트
+                                    orderItem.getOrderItemOptions().stream().map(opt ->
+                                            new OrderListResponse.OrderSummary.OptionSummaryDto(
+                                                    opt.getMenuOption().getId(),
+                                                    opt.getMenuOption().getItemName(),
+                                                    opt.getQuantity()
+                                            )
+                                    ).collect(java.util.stream.Collectors.toList())
                             ))
                             .collect(Collectors.toList());
                     
@@ -140,32 +196,39 @@ public class OrderController {
     
     // 배달 대기목록 조회 (배달직원용)
     @GetMapping("/orders/delivery")
-    public ResponseEntity<OrderListResponse> getDeliveryOrders() {
+    public ResponseEntity<DeliveryOrderListResponse> getDeliveryOrders() {
         List<Order> orders = orderRepository.findByDeliveryStatusIn(List.of(Order.Status.COOKED, Order.Status.DELIVERING));
-        
-        List<OrderListResponse.OrderSummary> orderList = orders.stream()
+
+        List<DeliveryOrderListResponse.OrderSummary> orderList = orders.stream()
                 .map(order -> {
-                    List<OrderListResponse.OrderSummary.OrderedItem> orderedItems = order.getOrderItems().stream()
-                            .map(orderItem -> new OrderListResponse.OrderSummary.OrderedItem(
+                    List<DeliveryOrderListResponse.OrderSummary.OrderItem> orderItems = order.getOrderItems().stream()
+                            .map(orderItem -> new DeliveryOrderListResponse.OrderSummary.OrderItem(
                                     orderItem.getMenu().getId(),
                                     orderItem.getMenu().getName(),
                                     orderItem.getQuantity(),
                                     orderItem.getServingStyle().getId(),
                                     orderItem.getServingStyle().getName(),
-                                    List.of() // 현재는 빈 리스트
+                                    orderItem.getOrderItemOptions().stream().map(opt ->
+                                            new DeliveryOrderListResponse.OrderSummary.OptionSummaryDto(
+                                                    opt.getMenuOption().getId(),
+                                                    opt.getMenuOption().getItemName(),
+                                                    opt.getQuantity()
+                                            )
+                                    ).collect(java.util.stream.Collectors.toList())
                             ))
                             .collect(Collectors.toList());
                     
-                    return new OrderListResponse.OrderSummary(
+                    return new DeliveryOrderListResponse.OrderSummary(
                             order.getId(),
                             order.getDeliveryStatus().toString(),
                             order.getDeliveryTime().toString(),
-                            orderedItems
+                            order.getAddress().getAddress(),
+                            orderItems
                     );
                 })
                 .collect(Collectors.toList());
         
-        OrderListResponse response = new OrderListResponse(orderList);
+        DeliveryOrderListResponse response = new DeliveryOrderListResponse(orderList);
         
         return ResponseEntity.ok(response);
     }
@@ -173,10 +236,7 @@ public class OrderController {
     // 관리자용 주문 관리(상세 API 응답)
     @PostMapping("/orders")
     public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody OrderCreateRequest request) {
-        OrderDto orderDto = orderService.createOrder(request);
-        Order order = orderRepository.findByIdWithDetails(orderDto.getId())
-                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다: " + orderDto.getId()));
-        OrderResponse response = OrderResponse.from(order);
+        OrderResponse response = orderService.createOrder(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -192,44 +252,48 @@ public class OrderController {
     public ResponseEntity<Map<String, Object>> getOrdersByCustomerId(@PathVariable Long customerId) {
         List<Order> orders = orderRepository.findByCustomerIdWithDetails(customerId);
         
-        // DONE 상태가 아닌 주문만 필터링
-        List<Order> activeOrders = orders.stream()
-                .filter(order -> order.getDeliveryStatus() != Order.Status.DONE)
-                .collect(Collectors.toList());
-        
-        List<Map<String, Object>> orderList = activeOrders.stream()
+        // 모든 상태의 주문을 표시
+        List<Map<String, Object>> orderList = orders.stream()
                 .map(order -> {
                     Map<String, Object> orderMap = new HashMap<>();
                     orderMap.put("orderId", order.getId());
-                    orderMap.put("orderDate", order.getCreatedAt().toLocalDate().toString().replace("-", "."));
-                    orderMap.put("status", order.getDeliveryStatus());
-                    orderMap.put("totalPrice", order.getFinalPrice());
                     
-                    // 주문 요약 생성
-                    StringBuilder summary = new StringBuilder();
-                    for (OrderItem orderItem : order.getOrderItems()) {
-                        summary.append(orderItem.getMenu().getName())
-                               .append(" ").append(orderItem.getQuantity()).append("개");
-                        
-                        if (!orderItem.getOrderItemOptions().isEmpty()) {
-                            summary.append("(");
-                            for (int i = 0; i < orderItem.getOrderItemOptions().size(); i++) {
-                                OrderItemOption option = orderItem.getOrderItemOptions().get(i);
-                                summary.append(option.getMenuOption().getItemName())
-                                       .append(" ").append(option.getQuantity());
-                                if (i < orderItem.getOrderItemOptions().size() - 1) {
-                                    summary.append(", ");
-                                }
-                            }
-                            summary.append(")");
-                        }
-                        
-                        if (orderItem.getServingStyle() != null) {
-                            summary.append(", ").append(orderItem.getServingStyle().getName());
-                        }
-                    }
-                    orderMap.put("orderSummary", summary.toString());
+                    // 날짜 형식: "2025.09.11"
+                    String orderDate = order.getCreatedAt().toLocalDate().toString()
+                            .replace("-", ".");
+                    orderMap.put("orderDate", orderDate);
+                    
+                    orderMap.put("totalPrice", order.getTotalPrice());
+                    orderMap.put("status", order.getDeliveryStatus().toString());
                     orderMap.put("deliveryTime", order.getDeliveryTime().toString());
+                    
+                    // 주문 아이템 목록
+                    List<Map<String, Object>> orderItemsList = order.getOrderItems().stream()
+                            .map(orderItem -> {
+                                Map<String, Object> itemMap = new HashMap<>();
+                                itemMap.put("name", orderItem.getMenu().getName()); // 메뉴명
+                                itemMap.put("quantity", orderItem.getQuantity());
+                                
+                                // 서빙 스타일명 (예시에서 두 번째 name으로 표시)
+                                if (orderItem.getServingStyle() != null) {
+                                    itemMap.put("styleName", orderItem.getServingStyle().getName());
+                                }
+                                
+                                // 옵션 목록
+                                List<Map<String, Object>> optionsList = orderItem.getOrderItemOptions().stream()
+                                        .map(option -> {
+                                            Map<String, Object> optionMap = new HashMap<>();
+                                            optionMap.put("name", option.getMenuOption().getItemName());
+                                            optionMap.put("quantity", option.getQuantity());
+                                            return optionMap;
+                                        })
+                                        .collect(Collectors.toList());
+                                itemMap.put("options", optionsList);
+                                
+                                return itemMap;
+                            })
+                            .collect(Collectors.toList());
+                    orderMap.put("orderItems", orderItemsList);
                     
                     return orderMap;
                 })
@@ -243,10 +307,7 @@ public class OrderController {
 
     @PostMapping("/orders/{id}/complete")
     public ResponseEntity<OrderResponse> completeOrder(@PathVariable Long id) {
-        OrderDto orderDto = orderService.completeOrder(id);
-        Order order = orderRepository.findByIdWithDetails(orderDto.getId())
-                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다: " + orderDto.getId()));
-        OrderResponse response = OrderResponse.from(order);
+        OrderResponse response = orderService.completeOrder(id);
         return ResponseEntity.ok(response);
     }
 
@@ -264,20 +325,12 @@ public class OrderController {
         // 상태별 다른 처리
         switch (newStatus) {
             case "COOKING":
-                // 가능한 요리사가 있는지 확인
-                if (!employeeAvailabilityService.hasAvailableCook()) {
-                    throw new IllegalStateException("현재 가능한 요리사가 없습니다. 잠시 후 다시 시도해주세요.");
-                }
                 order.startCooking();
                 break;
             case "COOKED":
                 order.completeCooking();
                 break;
             case "DELIVERING":
-                // 가능한 배달원이 있는지 확인
-                if (!employeeAvailabilityService.hasAvailableDeliveryPerson()) {
-                    throw new IllegalStateException("현재 가능한 배달원이 없습니다. 잠시 후 다시 시도해주세요.");
-                }
                 order.startDelivering();
                 break;
             case "DONE":
@@ -295,8 +348,7 @@ public class OrderController {
         
         OrderUpdateResponse response = new OrderUpdateResponse(
                 savedOrder.getId(),
-                savedOrder.getDeliveryStatus().toString(),
-                LocalDateTime.now()
+                savedOrder.getDeliveryStatus().toString()
         );
         
         return ResponseEntity.ok(response);
@@ -350,17 +402,6 @@ public class OrderController {
         return ResponseEntity.ok(response);
     }
 
-
-    // 간편 재주문 API
-    @PostMapping("/orders/{id}/reorder")
-    public ResponseEntity<OrderResponse> reorder(@PathVariable Long id, @Valid @RequestBody ReorderRequest request) {
-        OrderDto orderDto = orderService.reorder(id, request);
-        Order order = orderRepository.findByIdWithDetails(orderDto.getId())
-                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다: " + orderDto.getId()));
-        OrderResponse response = OrderResponse.from(order);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
     // 직접적인 주문 생성 (상세 로직 포함)
     @PostMapping("/orders/direct")
     public ResponseEntity<OrderResponse> createOrderDirect(@RequestBody OrderCreateRequest request) {
@@ -388,7 +429,7 @@ public class OrderController {
         // 4) 주문 아이템들 생성
         for (OrderItemCreateRequest itemRequest : request.getOrderItems()) {
             Menu menu = menuRepository.findById(itemRequest.getMenuId()).get();
-            ServingStyle servingStyle = servingStyleRepository.findById(itemRequest.getServingStyleId()).get();
+            ServingStyle servingStyle = servingStyleRepository.findById(itemRequest.getStyleId()).get();
 
             OrderItem orderItem = OrderItem.builder()
                     .menu(menu)
@@ -422,8 +463,6 @@ public class OrderController {
         response.put("customerName", order.getCustomer().getName());
         response.put("orderDate", order.getCreatedAt());
         response.put("totalPrice", order.getTotalPrice());
-        response.put("finalPrice", order.getFinalPrice());
-        response.put("discountAmount", order.getDiscountAmount());
         response.put("modifiedAt", order.getUpdatedAt());
 
         return ResponseEntity.ok(response);
@@ -440,7 +479,6 @@ public class OrderController {
                     orderMap.put("orderId", order.getId());
                     orderMap.put("orderDate", order.getCreatedAt());
                     orderMap.put("totalPrice", order.getTotalPrice());
-                    orderMap.put("finalPrice", order.getFinalPrice());
                     return orderMap;
                 })
                 .collect(Collectors.toList());
@@ -456,8 +494,8 @@ public class OrderController {
             }
 
             // 서빙 스타일 존재 검증
-            if (!servingStyleRepository.existsById(itemRequest.getServingStyleId())) {
-                throw new IllegalArgumentException("서빙 스타일을 찾을 수 없습니다: " + itemRequest.getServingStyleId());
+            if (!servingStyleRepository.existsById(itemRequest.getStyleId())) {
+                throw new IllegalArgumentException("서빙 스타일을 찾을 수 없습니다: " + itemRequest.getStyleId());
             }
         }
     }

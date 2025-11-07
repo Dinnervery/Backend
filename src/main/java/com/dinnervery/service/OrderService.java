@@ -1,13 +1,13 @@
 package com.dinnervery.service;
 
-import com.dinnervery.dto.OrderDto;
+import com.dinnervery.dto.order.OrderResponse;
 import com.dinnervery.dto.request.OrderCreateRequest;
 import com.dinnervery.dto.request.OrderItemCreateRequest;
-import com.dinnervery.dto.request.ReorderRequest;
 import com.dinnervery.entity.*;
 import com.dinnervery.repository.AddressRepository;
 import com.dinnervery.repository.CustomerRepository;
 import com.dinnervery.repository.MenuRepository;
+import com.dinnervery.repository.MenuOptionRepository;
 import com.dinnervery.repository.OrderRepository;
 import com.dinnervery.repository.ServingStyleRepository;
 
@@ -28,25 +28,11 @@ public class OrderService {
     private final MenuRepository menuRepository;
     private final AddressRepository addressRepository;
     private final ServingStyleRepository servingStyleRepository;
-    private final BusinessHoursService businessHoursService;
+    private final MenuOptionRepository menuOptionRepository;
+    private final StorageService storageService;
 
     @Transactional
-    public OrderDto createOrder(OrderCreateRequest request) {
-        // 마감시간 검증(21:30 이후 주문 시도 시 410 에러)
-        if (businessHoursService.isAfterLastOrderTime()) {
-            throw new IllegalStateException("마감되었습니다.");
-        }
-        
-        // 영업시간 검증(영업시간 외 주문 시도 시 503 에러)
-        if (!businessHoursService.isBusinessHours()) {
-            throw new IllegalStateException("현재 영업시간이 아닙니다. 영업시간: 오후 5시~ 오후 11시");
-        }
-
-        // 배송 희망 시간 검증
-        if (!businessHoursService.isValidDeliveryTime(request.getDeliveryTime())) {
-            throw new IllegalArgumentException("배송 희망 시간이 유효하지 않습니다. 16:00-22:00 사이의 10분 단위 시간을 선택해주세요.");
-        }
-
+    public OrderResponse createOrder(OrderCreateRequest request) {
         // 고객 조회
         Customer customer = customerRepository.findById(request.getCustomerId())
                 .orElseThrow(() -> new IllegalArgumentException("고객을 찾을 수 없습니다: " + request.getCustomerId()));
@@ -63,13 +49,26 @@ public class OrderService {
                 .deliveryTime(request.getDeliveryTime())
                 .build();
 
+        // 재고 확인 (save 이전)
+        if (request.getOrderItems() != null) {
+            for (OrderItemCreateRequest itemRequest : request.getOrderItems()) {
+                if (itemRequest.getOptions() != null) {
+                    for (OrderItemCreateRequest.OptionRequest optReq : itemRequest.getOptions()) {
+                        MenuOption menuOption = menuOptionRepository.findById(optReq.getOptionId())
+                                .orElseThrow(() -> new IllegalArgumentException("옵션을 찾을 수 없습니다: " + optReq.getOptionId()));
+                        storageService.checkStock(menuOption, optReq.getQuantity());
+                    }
+                }
+            }
+        }
+
         // 주문 아이템들 추가
         for (OrderItemCreateRequest itemRequest : request.getOrderItems()) {
             Menu menu = menuRepository.findById(itemRequest.getMenuId())
                     .orElseThrow(() -> new IllegalArgumentException("메뉴를 찾을 수 없습니다: " + itemRequest.getMenuId()));
             
-            ServingStyle servingStyle = servingStyleRepository.findById(itemRequest.getServingStyleId())
-                    .orElseThrow(() -> new IllegalArgumentException("서빙 스타일을 찾을 수 없습니다: " + itemRequest.getServingStyleId()));
+            ServingStyle servingStyle = servingStyleRepository.findById(itemRequest.getStyleId())
+                    .orElseThrow(() -> new IllegalArgumentException("서빙 스타일을 찾을 수 없습니다: " + itemRequest.getStyleId()));
 
             OrderItem orderItem = OrderItem.builder()
                     .menu(menu)
@@ -77,29 +76,55 @@ public class OrderService {
                     .quantity(itemRequest.getQuantity())
                     .build();
 
+            // 옵션 매핑
+            if (itemRequest.getOptions() != null && !itemRequest.getOptions().isEmpty()) {
+                for (OrderItemCreateRequest.OptionRequest optReq : itemRequest.getOptions()) {
+                    MenuOption menuOption = menuOptionRepository.findById(optReq.getOptionId())
+                            .orElseThrow(() -> new IllegalArgumentException("옵션을 찾을 수 없습니다: " + optReq.getOptionId()));
+                    OrderItemOption orderItemOption = OrderItemOption.builder()
+                            .menuOption(menuOption)
+                            .quantity(optReq.getQuantity())
+                            .build();
+                    orderItem.addOrderItemOption(orderItemOption);
+                }
+            }
+
             order.addOrderItem(orderItem);
         }
 
         Order savedOrder = orderRepository.save(order);
+
+        // 재고 차감 (save 이후)
+        if (request.getOrderItems() != null) {
+            for (OrderItemCreateRequest itemRequest : request.getOrderItems()) {
+                if (itemRequest.getOptions() != null) {
+                    for (OrderItemCreateRequest.OptionRequest optReq : itemRequest.getOptions()) {
+                        MenuOption menuOption = menuOptionRepository.findById(optReq.getOptionId())
+                                .orElseThrow(() -> new IllegalArgumentException("옵션을 찾을 수 없습니다: " + optReq.getOptionId()));
+                        storageService.deductStock(menuOption, optReq.getQuantity());
+                    }
+                }
+            }
+        }
         
-        return OrderDto.from(savedOrder);
+        return OrderResponse.from(savedOrder);
     }
 
-    public OrderDto getOrderById(Long id) {
+    public OrderResponse getOrderById(Long id) {
         Order order = orderRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다: " + id));
-        return OrderDto.from(order);
+        return OrderResponse.from(order);
     }
 
-    public List<OrderDto> getOrdersByCustomerId(Long customerId) {
+    public List<OrderResponse> getOrdersByCustomerId(Long customerId) {
         List<Order> orders = orderRepository.findByCustomerIdWithDetails(customerId);
         return orders.stream()
-                .map(OrderDto::from)
+                .map(OrderResponse::from)
                 .collect(Collectors.toList());
     }
 
     @Transactional
-    public OrderDto completeOrder(Long orderId) {
+    public OrderResponse completeOrder(Long orderId) {
         Order order = orderRepository.findByIdWithDetails(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다: " + orderId));
 
@@ -118,56 +143,7 @@ public class OrderService {
         customer.incrementOrderCount();
         customerRepository.save(customer);
         
-        return OrderDto.from(completedOrder);
-    }
-
-
-    @Transactional
-    public OrderDto reorder(Long originalOrderId, ReorderRequest request) {
-        // 마감시간 검증(21:30 이후 주문 시도 시 410 에러)
-        if (businessHoursService.isAfterLastOrderTime()) {
-            throw new IllegalStateException("마감되었습니다.");
-        }
-        
-        // 영업시간 검증(영업시간 외 주문 시도 시 503 에러)
-        if (!businessHoursService.isBusinessHours()) {
-            throw new IllegalStateException("현재 영업시간이 아닙니다. 영업시간: 오후 5시~ 오후 11시");
-        }
-
-        // 원본 주문 조회
-        Order originalOrder = orderRepository.findByIdWithDetails(originalOrderId)
-                .orElseThrow(() -> new IllegalArgumentException("원본 주문을 찾을 수 없습니다: " + originalOrderId));
-
-        // 고객 조회
-        Customer customer = customerRepository.findById(request.getCustomerId())
-                .orElseThrow(() -> new IllegalArgumentException("고객을 찾을 수 없습니다: " + request.getCustomerId()));
-
-        // 주소 조회
-        Address address = addressRepository.findById(request.getAddressId())
-                .orElseThrow(() -> new IllegalArgumentException("주소를 찾을 수 없습니다: " + request.getAddressId()));
-
-        // 새주문 생성
-        Order newOrder = Order.builder()
-                .customer(customer)
-                .address(address)
-                .cardNumber(request.getCardNumber())
-                .deliveryTime(originalOrder.getDeliveryTime()) // 원본 주문의 배송 시간 사용
-                .build();
-
-        // 원본 주문의 주문 아이템들을 복제
-        for (OrderItem originalItem : originalOrder.getOrderItems()) {
-            OrderItem newOrderItem = OrderItem.builder()
-                    .menu(originalItem.getMenu())
-                    .servingStyle(originalItem.getServingStyle())
-                    .quantity(originalItem.getQuantity())
-                    .build();
-
-            newOrder.addOrderItem(newOrderItem);
-        }
-
-        Order savedOrder = orderRepository.save(newOrder);
-        
-        return OrderDto.from(savedOrder);
+        return OrderResponse.from(completedOrder);
     }
 }
 
