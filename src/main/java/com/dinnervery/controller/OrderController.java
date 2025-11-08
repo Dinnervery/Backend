@@ -2,7 +2,6 @@ package com.dinnervery.controller;
 
 import com.dinnervery.dto.order.response.OrderResponse;
 import com.dinnervery.dto.order.request.PriceCalculationRequest;
-import com.dinnervery.dto.order.response.OrderPreviewResponse;
 import com.dinnervery.dto.order.response.PriceCalculationResponse;
 import com.dinnervery.dto.order.response.OrderListResponse;
 import com.dinnervery.dto.order.response.DeliveryOrderListResponse;
@@ -19,11 +18,7 @@ import com.dinnervery.repository.StyleRepository;
 import com.dinnervery.entity.Order;
 import com.dinnervery.entity.OrderItem;
 import com.dinnervery.entity.OrderItemOption;
-import com.dinnervery.entity.Cart;
-import com.dinnervery.entity.CartItem;
-import com.dinnervery.entity.CartItemOption;
 import com.dinnervery.repository.OrderRepository;
-import com.dinnervery.repository.CartRepository;
 import com.dinnervery.service.OrderService;
 import com.dinnervery.service.StorageService;
 
@@ -48,7 +43,6 @@ public class OrderController {
     private final MenuRepository menuRepository;
     private final StyleRepository styleRepository;
     private final MenuOptionRepository menuOptionRepository;
-    private final CartRepository cartRepository;
     private final StorageService storageService;
 
     // 가격계산 API
@@ -87,71 +81,6 @@ public class OrderController {
         PriceCalculationResponse response = new PriceCalculationResponse(
                 subtotal,
                 customer.getGrade().toString()
-        );
-        
-        return ResponseEntity.ok(response);
-    }
-
-    // 주문 미리보기 API (가격계산 + 주문 내역 확인) - Cart 기반
-    @GetMapping("/cart/{customerId}/preview")
-    public ResponseEntity<OrderPreviewResponse> previewOrder(@PathVariable Long customerId) {
-        // 장바구니 조회
-        Cart cart = cartRepository.findByCustomer_Id(customerId)
-                .orElseThrow(() -> new IllegalArgumentException("장바구니가 비어있습니다. 주문할 상품을 장바구니에 담아주세요."));
-        
-        // 장바구니가 비어있는지 확인
-        if (cart.getCartItems() == null || cart.getCartItems().isEmpty()) {
-            throw new IllegalArgumentException("장바구니가 비어있습니다. 주문할 상품을 장바구니에 담아주세요.");
-        }
-        
-        List<OrderPreviewResponse.ItemResponse> itemResponses = new ArrayList<>();
-        int itemsTotalPrice = 0;
-        
-        // 각 CartItem별 처리
-        for (CartItem cartItem : cart.getCartItems()) {
-            Menu menu = cartItem.getMenu();
-            Style style = cartItem.getStyle();
-            
-            // 아이템 기본 가격 계산 (메뉴 가격 + 스타일 추가 가격)
-            int basePrice = menu.getPrice() + style.getExtraPrice();
-            
-            // 옵션 처리
-            List<OrderPreviewResponse.OptionResponse> optionResponses = new ArrayList<>();
-            int optionPrice = 0;
-            
-            if (cartItem.getCartItemOptions() != null && !cartItem.getCartItemOptions().isEmpty()) {
-                for (CartItemOption cartItemOption : cartItem.getCartItemOptions()) {
-                    MenuOption menuOption = cartItemOption.getMenuOption();
-                    
-                    // 옵션 정보 추가
-                    optionResponses.add(new OrderPreviewResponse.OptionResponse(
-                            menuOption.getName(),
-                            cartItemOption.getQuantity()
-                    ));
-                    
-                    // 옵션 추가 가격 계산 (기본 수량을 초과하는 만큼만 계산)
-                    optionPrice += menuOption.calculateExtraCost(cartItemOption.getQuantity());
-                }
-            }
-            
-            // 아이템 총 가격 계산 (기본 가격 + 옵션 가격) * 수량
-            int price = (basePrice + optionPrice) * cartItem.getQuantity();
-            itemsTotalPrice += price;
-            
-            // 아이템 응답 생성
-            itemResponses.add(new OrderPreviewResponse.ItemResponse(
-                    menu.getName(),
-                    cartItem.getQuantity(),
-                    price,
-                    style.getName(),
-                    optionResponses
-            ));
-        }
-        
-        // 응답 생성
-        OrderPreviewResponse response = new OrderPreviewResponse(
-                itemResponses,
-                itemsTotalPrice
         );
         
         return ResponseEntity.ok(response);
