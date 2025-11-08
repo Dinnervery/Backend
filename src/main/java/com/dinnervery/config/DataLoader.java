@@ -14,6 +14,7 @@ import com.dinnervery.entity.Staff;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -26,6 +27,7 @@ public class DataLoader implements CommandLineRunner {
     private final MenuOptionRepository menuOptionRepository;
     private final StorageRepository storageRepository;
     private final StaffRepository staffRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) throws Exception {
@@ -282,20 +284,20 @@ public class DataLoader implements CommandLineRunner {
 
     private void createStaff() {
         if (staffRepository.count() == 0) {
-            // 요리사 계정 생성
+            // 요리사 계정 생성 (비밀번호 암호화)
             Staff cook = Staff.builder()
                     .loginId("cook")
-                    .password("cook123")
+                    .password(passwordEncoder.encode("cook123"))
                     .name("요리사")
                     .phoneNumber("010-1111-1111")
                     .task(Staff.StaffTask.COOK)
                     .build();
             staffRepository.save(cook);
 
-            // 배달원 계정 생성
+            // 배달원 계정 생성 (비밀번호 암호화)
             Staff deliveryPerson = Staff.builder()
                     .loginId("delivery")
-                    .password("delivery123")
+                    .password(passwordEncoder.encode("delivery123"))
                     .name("배달원")
                     .phoneNumber("010-2222-2222")
                     .task(Staff.StaffTask.DELIVERY)

@@ -184,31 +184,6 @@ public class CartController {
         return ResponseEntity.ok(response);
     }
 
-    // 디너 아이템 삭제 (특정 장바구니 아이템 삭제)
-    @DeleteMapping("/cart/{customerId}/items/{cartItemId}")
-    public ResponseEntity<Map<String, Object>> removeCartItem(@PathVariable Long customerId, @PathVariable Long cartItemId) {
-        CartItem cartItem = cartItemRepository.findById(cartItemId)
-                .orElseThrow(() -> new IllegalArgumentException("장바구니 아이템을 찾을 수 없습니다: " + cartItemId));
-        
-        cartItemRepository.delete(cartItem);
-        
-        // 총금액 재계산
-        Optional<Cart> cart = cartRepository.findByCustomer_Id(customerId);
-        int totalAmount = 0;
-        if (cart.isPresent()) {
-            List<CartItem> remainingItems = cartItemRepository.findByCart_Id(cart.get().getId());
-            totalAmount = remainingItems.stream()
-                    .mapToInt(item -> item.getMenu().getPrice() * item.getQuantity())
-                    .sum();
-        }
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("deletedCartItemId", cartItemId);
-        response.put("totalAmount", totalAmount);
-
-        return ResponseEntity.ok(response);
-    }
-    
     // 구성량 수량 변경
     @PatchMapping("/cart/{customerId}/items/{cartItemId}/options/{optionId}")
     public ResponseEntity<Map<String, Object>> changeOptionQuantity(
@@ -260,39 +235,4 @@ public class CartController {
         return ResponseEntity.ok(response);
     }
     
-    // 스타일 제거
-    @DeleteMapping("/cart/{customerId}/items/{cartItemId}/styles")
-    public ResponseEntity<Map<String, Object>> removeStyle(
-            @PathVariable Long customerId, 
-            @PathVariable Long cartItemId) {
-        
-        CartItem cartItem = cartItemRepository.findById(cartItemId)
-                .orElseThrow(() -> new IllegalArgumentException("장바구니 아이템을 찾을 수 없습니다: " + cartItemId));
-        
-        // 스타일을 기본값으로 변경(추가 가격 0원으로 설정)
-        Style defaultStyle = styleRepository.findAll().stream()
-                .filter(s -> s.getExtraPrice() == 0)
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("기본 스타일을 찾을 수 없습니다"));
-        
-        cartItem.setStyle(defaultStyle);
-        cartItemRepository.save(cartItem);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("cartItemId", cartItemId);
-        response.put("itemTotal", cartItem.getMenu().getPrice() * cartItem.getQuantity());
-        
-        // 총금액 재계산
-        Optional<Cart> cart = cartRepository.findByCustomer_Id(customerId);
-        int totalAmount = 0;
-        if (cart.isPresent()) {
-            List<CartItem> cartItems = cartItemRepository.findByCart_Id(cart.get().getId());
-            totalAmount = cartItems.stream()
-                    .mapToInt(item -> item.getMenu().getPrice() * item.getQuantity() + item.getStyle().getExtraPrice())
-                    .sum();
-        }
-        response.put("totalAmount", totalAmount);
-        
-        return ResponseEntity.ok(response);
-    }
 }

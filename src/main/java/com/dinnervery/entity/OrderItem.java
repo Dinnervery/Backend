@@ -3,6 +3,7 @@ package com.dinnervery.entity;
 import com.dinnervery.common.BaseEntity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -39,6 +40,7 @@ public class OrderItem extends BaseEntity {
     private int itemTotalPrice;
 
     @OneToMany(mappedBy = "orderItem", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 50)
     private List<OrderItemOption> orderItemOptions = new ArrayList<>();
 
     @Builder

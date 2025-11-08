@@ -3,6 +3,7 @@ package com.dinnervery.entity;
 import com.dinnervery.common.BaseEntity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -10,6 +11,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "order_item_options")
+@BatchSize(size = 50)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OrderItemOption extends BaseEntity {

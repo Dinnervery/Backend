@@ -5,6 +5,7 @@ import com.dinnervery.dto.customer.request.CustomerCreateRequest;
 import com.dinnervery.entity.Customer;
 import com.dinnervery.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public CustomerDto createCustomer(CustomerCreateRequest request) {
@@ -24,7 +26,7 @@ public class CustomerService {
 
         Customer customer = Customer.builder()
                 .loginId(request.getLoginId())
-                .password(request.getPassword())
+                .password(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
                 .phoneNumber(request.getPhoneNumber())
                 .address(request.getAddress())

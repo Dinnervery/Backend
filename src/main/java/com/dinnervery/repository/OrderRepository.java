@@ -12,11 +12,29 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     List<Order> findByCustomer_Id(Long customerId);
     
-    @Query("SELECT o FROM Order o JOIN FETCH o.customer JOIN FETCH o.orderItems oi JOIN FETCH oi.menu WHERE o.id = :orderId")
+    @Query("SELECT DISTINCT o FROM Order o " +
+           "JOIN FETCH o.customer " +
+           "JOIN FETCH o.orderItems oi " +
+           "JOIN FETCH oi.menu " +
+           "JOIN FETCH oi.style " +
+           "WHERE o.id = :orderId")
     Optional<Order> findByIdWithDetails(@Param("orderId") Long orderId);
     
-    @Query("SELECT o FROM Order o JOIN FETCH o.customer JOIN FETCH o.orderItems oi JOIN FETCH oi.menu WHERE o.customer.id = :customerId ORDER BY o.createdAt DESC")
+    @Query("SELECT DISTINCT o FROM Order o " +
+           "JOIN FETCH o.customer " +
+           "JOIN FETCH o.orderItems oi " +
+           "JOIN FETCH oi.menu " +
+           "JOIN FETCH oi.style " +
+           "WHERE o.customer.id = :customerId ORDER BY o.createdAt DESC")
     List<Order> findByCustomerIdWithDetails(@Param("customerId") Long customerId);
     
     List<Order> findByDeliveryStatusIn(List<Order.Status> statuses);
+    
+    @Query("SELECT DISTINCT o FROM Order o " +
+           "JOIN FETCH o.customer " +
+           "JOIN FETCH o.orderItems oi " +
+           "JOIN FETCH oi.menu " +
+           "JOIN FETCH oi.style " +
+           "WHERE o.deliveryStatus IN :statuses")
+    List<Order> findByDeliveryStatusInWithDetails(@Param("statuses") List<Order.Status> statuses);
 }

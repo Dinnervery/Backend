@@ -13,7 +13,7 @@ public class OrderListResponse {
         Long orderId;
         String status;
         String deliveryTime;
-        List<OrderedItem> orderedItems;
+        List<OrderedItem> orderItems;
         
         @Value
         public static class OrderedItem {

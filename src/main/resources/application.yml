@@ -42,3 +42,8 @@ business:
     vip-discount-rate: 10
 data-load:
   mode: dev
+
+# JWT 설정
+jwt:
+  secret: dinnervery-secret-key-for-jwt-token-generation-minimum-256-bits-long
+  expiration: 86400000 # 24시간 (밀리초)

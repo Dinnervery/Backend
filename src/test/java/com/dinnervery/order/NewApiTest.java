@@ -1,9 +1,7 @@
 package com.dinnervery.order;
 
 import com.dinnervery.controller.CartController;
-import com.dinnervery.controller.OrderSummaryController;
 import com.dinnervery.dto.cart.request.CartAddItemRequest;
-import com.dinnervery.dto.order.request.OrderSummaryRequest;
 import com.dinnervery.entity.Customer;
 import com.dinnervery.entity.Menu;
 import com.dinnervery.entity.MenuOption;
@@ -40,8 +38,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
 
 @WebMvcTest(controllers = {
-    CartController.class,
-    OrderSummaryController.class
+    CartController.class
 })
 @ActiveProfiles("test")
 class NewApiTest {
@@ -137,27 +134,6 @@ class NewApiTest {
 
     @Test
     @org.junit.jupiter.api.Order(1)
-    void testOrderSummaryConfirmationAPI() throws Exception {
-        OrderSummaryRequest.SelectedOption selectedOption = OrderSummaryRequest.SelectedOption.builder()
-                .optionId(MOCK_OPTION_ID)
-                .quantity(1)
-                .build();
-        
-        OrderSummaryRequest request = OrderSummaryRequest.builder()
-                .menuId(MOCK_MENU_ID)
-                .selectedOptions(List.of(selectedOption))
-                .styleId(MOCK_STYLE_ID)
-                .build();
-        
-        mockMvc.perform(post("/api/order-summary")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalPrice").exists());
-    }
-
-    @Test
-    @org.junit.jupiter.api.Order(2)
     void testCartAddAPI() throws Exception {
         CartAddItemRequest request = CartAddItemRequest.builder()
                 .menuId(MOCK_MENU_ID)
@@ -175,7 +151,7 @@ class NewApiTest {
     }
 
     @Test
-    @org.junit.jupiter.api.Order(3)
+    @org.junit.jupiter.api.Order(2)
     void testCartRetrievalAPI() throws Exception {
         // cart와 cartItems가 존재하는 시나리오
         ReflectionTestUtils.setField(cart, "id", MOCK_CART_ID);
@@ -191,7 +167,7 @@ class NewApiTest {
     }
 
     @Test
-    @org.junit.jupiter.api.Order(4)
+    @org.junit.jupiter.api.Order(3)
     void testChangeOptionQuantityAPI() throws Exception {
         Cart cartLocal = Cart.builder().customer(customer).build();
         ReflectionTestUtils.setField(cartLocal, "id", MOCK_CART_ID);
@@ -223,32 +199,4 @@ class NewApiTest {
                 .andExpect(jsonPath("$.cartItemId").value(MOCK_CART_ITEM_ID));
     }
 
-    @Test
-    @org.junit.jupiter.api.Order(5)
-    void testRemoveStyleAPI() throws Exception {
-        CartItem item = CartItem.builder().menu(menu).style(style).quantity(1).build();
-        ReflectionTestUtils.setField(item, "id", MOCK_CART_ITEM_ID);
-        when(cartItemRepository.findById(MOCK_CART_ITEM_ID)).thenReturn(Optional.of(item));
-        when(styleRepository.findAll()).thenReturn(java.util.List.of(style));
-        
-        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                .delete("/api/cart/{customerId}/items/{cartItemId}/styles", MOCK_CUSTOMER_ID, MOCK_CART_ITEM_ID))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.cartItemId").value(MOCK_CART_ITEM_ID));
-    }
-
-    @Test
-    @org.junit.jupiter.api.Order(6)
-    void testRemoveCartItemAPI() throws Exception {
-        CartItem item = CartItem.builder().menu(menu).style(style).quantity(1).build();
-        ReflectionTestUtils.setField(item, "id", MOCK_CART_ITEM_ID);
-        when(cartItemRepository.findById(MOCK_CART_ITEM_ID)).thenReturn(Optional.of(item));
-        when(cartRepository.findByCustomer_Id(MOCK_CUSTOMER_ID)).thenReturn(Optional.of(Cart.builder().customer(customer).build()));
-        when(cartItemRepository.findByCart_Id(any(Long.class))).thenReturn(new java.util.ArrayList<>());
-        
-        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                .delete("/api/cart/{customerId}/items/{cartItemId}", MOCK_CUSTOMER_ID, MOCK_CART_ITEM_ID))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.deletedCartItemId").value(MOCK_CART_ITEM_ID));
-    }
 }
