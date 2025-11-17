@@ -10,12 +10,18 @@
 ## 로컬 실행
 
 #### Windows (CMD/PowerShell)
+```
 .\gradlew.bat clean bootRun
+```
 
 #### Linux/Mac
+```
 ./gradlew clean bootRun
+```
 
 #### H2 Console
+```
 URL: http://localhost:8080/h2-console
 JDBC URL: jdbc:h2:mem:dinnervery
 Username: sa
+```
