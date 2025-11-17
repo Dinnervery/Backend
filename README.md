@@ -1,6 +1,13 @@
 # DinnerVery Backend
 
-### 로컬 실행
+## 기술 스택
+- Java 17, Gradle
+- Spring Boot 3.5.x (Web, Data JPA, Validation)
+- Spring Security (JWT 기반 인증/인가)
+- Spring Data JPA (Hibernate)
+- H2
+
+## 로컬 실행
 
 #### Windows (CMD/PowerShell)
 .\gradlew.bat clean bootRun
@@ -9,6 +16,6 @@
 ./gradlew clean bootRun
 
 #### H2 Console
-http://localhost:8080/h2-console/ 접속
-
-JDBC URL : jdbc:h2:mem:dinnervery
+URL: http://localhost:8080/h2-console
+JDBC URL: jdbc:h2:mem:dinnervery
+Username: sa
