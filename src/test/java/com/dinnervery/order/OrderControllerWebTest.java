@@ -1,9 +1,11 @@
 package com.dinnervery.order;
 
 import com.dinnervery.controller.OrderController;
-import com.dinnervery.dto.order.request.PriceCalculationRequest;
-import com.dinnervery.entity.*;
-import com.dinnervery.repository.*;
+import com.dinnervery.dto.order.response.OrderListResponse;
+import com.dinnervery.dto.order.response.DeliveryOrderListResponse;
+import com.dinnervery.dto.order.response.OrderUpdateResponse;
+import com.dinnervery.entity.Customer;
+import com.dinnervery.entity.Order;
 import com.dinnervery.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,13 +19,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalTime;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
@@ -35,59 +38,60 @@ class OrderControllerWebTest {
     @Autowired private ObjectMapper objectMapper;
 
     @MockitoBean private OrderService orderService;
-    @MockitoBean private OrderRepository orderRepository;
-    @MockitoBean private OrderItemRepository orderItemRepository;
-    @MockitoBean private CustomerRepository customerRepository;
-    @MockitoBean private MenuRepository menuRepository;
-    @MockitoBean private StyleRepository styleRepository;
-    @MockitoBean private MenuOptionRepository menuOptionRepository;
 
     private Customer customer;
-    private Menu menu;
-    private Style style;
+    private Order order;
 
     @BeforeEach
     void setUp() {
         customer = Customer.builder().loginId("u").password("p").name("고객").phoneNumber("010-0000-0000").address("서울시").build();
-        menu = Menu.builder().name("메뉴").price(10000).build();
-        style = Style.builder().name("기본").extraPrice(0).build();
-
-        when(customerRepository.findById(anyLong())).thenReturn(Optional.of(customer));
-        when(menuRepository.findById(anyLong())).thenReturn(Optional.of(menu));
-        when(styleRepository.findById(anyLong())).thenReturn(Optional.of(style));
-        Order orderForDetail = Order.builder().customer(customer).address("서울시").cardNumber("1234").deliveryTime(LocalTime.of(20,0)).build();
-        ReflectionTestUtils.setField(orderForDetail, "id", 1L);
-        when(orderRepository.findByIdWithDetails(anyLong())).thenReturn(Optional.of(orderForDetail));
-        when(orderRepository.findByCustomerIdWithDetails(anyLong())).thenReturn(List.of(
-                Order.builder().customer(customer).address("서울시").cardNumber("1234").deliveryTime(LocalTime.of(20,0)).build()
-        ));
+        order = Order.builder().customer(customer).address("서울시").cardNumber("1234").deliveryTime(LocalTime.of(20,0)).build();
+        ReflectionTestUtils.setField(order, "id", 1L);
     }
 
     @Test
-    void calculatePrice_returnsOk() throws Exception {
-        PriceCalculationRequest.OrderItemRequest item = PriceCalculationRequest.OrderItemRequest.builder()
-                .menuId(1L).quantity(1).styleId(1L).optionIds(List.of()).build();
-        PriceCalculationRequest req = PriceCalculationRequest.builder()
-                .customerId(1L).items(List.of(item)).build();
+    void getCookingOrders_returnsOk() throws Exception {
+        OrderListResponse response = new OrderListResponse(List.of());
+        when(orderService.getCookingOrders()).thenReturn(response);
 
-        mockMvc.perform(post("/api/orders/calculate-price")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(req)))
+        mockMvc.perform(get("/api/orders/cooking"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.subtotal").exists());
+                .andExpect(jsonPath("$.orders").exists());
     }
 
     @Test
-    void getOrderDetail_returnsOk() throws Exception {
-        mockMvc.perform(get("/api/orders/detail/{id}", 1L))
+    void getDeliveryOrders_returnsOk() throws Exception {
+        DeliveryOrderListResponse response = new DeliveryOrderListResponse(List.of());
+        when(orderService.getDeliveryOrders()).thenReturn(response);
+
+        mockMvc.perform(get("/api/orders/delivery"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.orderId").exists());
+                .andExpect(jsonPath("$.orders").exists());
     }
 
     @Test
     void getOrdersByCustomer_returnsOk() throws Exception {
-        mockMvc.perform(get("/api/customers/{id}/orders", 1L))
-                .andExpect(status().isOk());
+        Map<String, Object> response = new HashMap<>();
+        response.put("orders", List.of());
+        when(orderService.getOrdersByCustomerIdForResponse(anyLong())).thenReturn(response);
+
+        mockMvc.perform(get("/api/orders/customer/{customerId}", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orders").exists());
+    }
+
+    @Test
+    void updateOrderStatus_returnsOk() throws Exception {
+        OrderUpdateResponse response = new OrderUpdateResponse(1L, "COOKING");
+        Map<String, Object> request = new HashMap<>();
+        request.put("status", "COOKING");
+        when(orderService.updateOrderStatus(anyLong(), request)).thenReturn(response);
+
+        mockMvc.perform(patch("/api/orders/{id}/status", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orderId").exists());
     }
 }
 

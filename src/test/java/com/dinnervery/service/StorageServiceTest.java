@@ -3,6 +3,7 @@ package com.dinnervery.service;
 import com.dinnervery.entity.Menu;
 import com.dinnervery.entity.MenuOption;
 import com.dinnervery.entity.Storage;
+import com.dinnervery.repository.MenuOptionRepository;
 import com.dinnervery.repository.StorageRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -24,6 +26,9 @@ class StorageServiceTest {
 
     @Mock
     private StorageRepository storageRepository;
+
+    @Mock
+    private MenuOptionRepository menuOptionRepository;
 
     @InjectMocks
     private StorageService storageService;
@@ -185,6 +190,40 @@ class StorageServiceTest {
         assertThat(storage1.getQuantity()).isEqualTo(100);
         assertThat(storage2.getQuantity()).isEqualTo(100);
         verify(storageRepository).saveAll(anyList());
+    }
+
+    @Test
+    void getAllStorage_성공() {
+        // given
+        MenuOption optionWithStorage = MenuOption.builder()
+                .menu(menu)
+                .name("스테이크")
+                .price(15000)
+                .defaultQty(1)
+                .build();
+        optionWithStorage.setStorageItem(meatStorage);
+
+        MenuOption optionWithoutStorage = MenuOption.builder()
+                .menu(menu)
+                .name("추가 옵션")
+                .price(5000)
+                .defaultQty(1)
+                .build();
+
+        when(menuOptionRepository.findAll()).thenReturn(List.of(optionWithStorage, optionWithoutStorage));
+
+        // when
+        Map<String, Object> result = storageService.getAllStorage();
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.containsKey("storageItems")).isTrue();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> items = (List<Map<String, Object>>) result.get("storageItems");
+        assertThat(items).hasSize(1); // storageItem이 연결된 옵션만 포함
+        assertThat(items.get(0).get("optionId")).isEqualTo(optionWithStorage.getId());
+        assertThat(items.get(0).get("optionName")).isEqualTo("스테이크");
+        assertThat(items.get(0).get("quantity")).isEqualTo(meatStorage.getQuantity());
     }
 }
 
