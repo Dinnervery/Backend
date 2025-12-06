@@ -55,7 +55,7 @@ data-load:
 
 # AI 서비스 설정
 ai:
-  base-url: ${AI_BASE_URL:http://ai-service:8081}
+  base-url: ${AI_BASE_URL:http://ai-service:8000}
 
 ---
 # 개발/테스트용 프로파일 (로컬 테스트 시에만 사용)
