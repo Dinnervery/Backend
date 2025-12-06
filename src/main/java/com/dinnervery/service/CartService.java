@@ -165,6 +165,86 @@ public class CartService {
     }
 
     @Transactional
+    public Map<String, Object> updateCartItem(Long customerId, Long cartItemId, CartAddItemRequest request) {
+        // 고객 검증
+        customerRepository.findById(customerId)
+                .orElseThrow(() -> new IllegalArgumentException("고객을 찾을 수 없습니다: " + customerId));
+
+        // 장바구니 아이템 조회 및 소유권 검증
+        CartItem cartItem = cartItemRepository.findById(cartItemId)
+                .orElseThrow(() -> new IllegalArgumentException("장바구니 아이템을 찾을 수 없습니다: " + cartItemId));
+        
+        // 해당 cartItem이 해당 customer의 cart에 속하는지 확인
+        Cart cart = cartItem.getCart();
+        if (cart == null || !cart.getCustomer().getId().equals(customerId)) {
+            throw new IllegalArgumentException("해당 장바구니 아이템에 대한 권한이 없습니다.");
+        }
+
+        // 기존 옵션 삭제 및 아이템 정보 업데이트
+        cartItem.updateItem(
+                request.getMenuId(),
+                request.getMenuName(),
+                request.getMenuPrice(),
+                request.getStyleId(),
+                request.getStyleName(),
+                request.getStyleExtraPrice(),
+                request.getMenuQuantity()
+        );
+
+        // 새로운 옵션 추가
+        if (request.getOptions() != null) {
+            for (CartAddItemRequest.OptionRequest optReq : request.getOptions()) {
+                // StorageService에서 옵션 이름에 따른 재고 소비량 조회
+                int storageConsumption = storageService.getStorageConsumption(optReq.getOptionName());
+                
+                CartItemOption cartItemOption = CartItemOption.builder()
+                        .optionId(optReq.getOptionId())
+                        .optionName(optReq.getOptionName())
+                        .optionPrice(optReq.getOptionPrice())
+                        .defaultQty(optReq.getDefaultQty())
+                        .quantity(optReq.getQuantity())
+                        .storageConsumption(storageConsumption)
+                        .build();
+                cartItem.addCartItemOption(cartItemOption);
+            }
+        }
+
+        CartItem savedCartItem = cartItemRepository.save(cartItem);
+
+        // 응답 생성
+        Map<String, Object> menuObj = new HashMap<>();
+        menuObj.put("menuId", savedCartItem.getMenuId());
+        menuObj.put("name", savedCartItem.getMenuName());
+        menuObj.put("quantity", savedCartItem.getQuantity());
+        menuObj.put("unitPrice", savedCartItem.getMenuPrice());
+
+        Map<String, Object> styleObj = new HashMap<>();
+        styleObj.put("styleId", savedCartItem.getStyleId());
+        styleObj.put("name", savedCartItem.getStyleName());
+        styleObj.put("price", savedCartItem.getStyleExtraPrice());
+
+        List<Map<String, Object>> optionsList = savedCartItem.getCartItemOptions().stream()
+                .map(o -> {
+                    Map<String, Object> optionMap = new HashMap<>();
+                    optionMap.put("optionId", o.getOptionId());
+                    optionMap.put("name", o.getOptionName());
+                    optionMap.put("quantity", o.getQuantity());
+                    optionMap.put("unitPrice", o.getOptionPrice());
+                    return optionMap;
+                })
+                .collect(Collectors.toList());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("cartItemId", savedCartItem.getId());
+        response.put("menu", menuObj);
+        response.put("style", styleObj);
+        response.put("options", optionsList);
+        response.put("totalAmount", savedCartItem.getItemTotalPrice());
+
+        return response;
+    }
+
+    @Transactional
     public Map<String, Object> changeOptionQuantity(
             Long customerId, 
             Long cartItemId, 

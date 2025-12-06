@@ -108,4 +108,20 @@ public class CartItem extends BaseEntity {
         option.setCartItem(null);
         calculateItemPrice();
     }
+
+    public void updateItem(Long menuId, String menuName, int menuPrice, Long styleId, String styleName, int styleExtraPrice, Integer quantity) {
+        if (quantity != null && quantity < 1) {
+            throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
+        }
+        this.menuId = menuId;
+        this.menuName = menuName;
+        this.menuPrice = menuPrice;
+        this.styleId = styleId;
+        this.styleName = styleName;
+        this.styleExtraPrice = styleExtraPrice;
+        this.quantity = quantity;
+        // 기존 옵션들 모두 삭제 (orphanRemoval=true이므로 자동 삭제됨)
+        this.cartItemOptions.clear();
+        calculateItemPrice();
+    }
 }

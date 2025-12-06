@@ -24,6 +24,16 @@ public class CartController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/cart/{customerId}/items/{cartItemId}")
+    public ResponseEntity<Map<String, Object>> updateCartItem(
+            @PathVariable Long customerId,
+            @PathVariable Long cartItemId,
+            @RequestBody CartAddItemRequest request) {
+        SecurityUtils.validateCustomerAccess(customerId);
+        Map<String, Object> response = cartService.updateCartItem(customerId, cartItemId, request);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/cart/{customerId}")
     public ResponseEntity<Map<String, Object>> getCart(@PathVariable Long customerId) {
         SecurityUtils.validateCustomerAccess(customerId);
