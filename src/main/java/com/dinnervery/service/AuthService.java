@@ -27,12 +27,10 @@ public class AuthService {
 
     @Transactional
     public CustomerResponse customerSignup(SignupRequest request) {
-        // 중복 검증
         if (customerRepository.existsByLoginId(request.getLoginId())) {
             throw new IllegalStateException("이미 존재하는 계정입니다.");
         }
 
-        // 고객 생성 (비밀번호 암호화)
         Customer customer = Customer.builder()
                 .loginId(request.getLoginId())
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -61,7 +59,6 @@ public class AuthService {
             throw new IllegalArgumentException("로그인에 실패했습니다");
         }
 
-        // JWT 토큰 생성
         String token = jwtProvider.generateToken(customer.getId(), customer.getLoginId(), "CUSTOMER");
 
         return new LoginResponse(
@@ -81,10 +78,8 @@ public class AuthService {
             throw new IllegalArgumentException("로그인에 실패했습니다");
         }
 
-        // Staff의 task에 따라 역할 설정 (COOK 또는 DELIVERY)
         String role = staff.getTask() == Staff.StaffTask.COOK ? "COOK" : "DELIVERY";
         
-        // JWT 토큰 생성
         String token = jwtProvider.generateToken(staff.getId(), staff.getLoginId(), role);
 
         return new StaffAuthResponse(

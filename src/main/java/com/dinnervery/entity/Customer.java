@@ -55,12 +55,10 @@ public class Customer extends BaseEntity {
     }
 
     public void updateGradeByOrderCount() {
-        // 등급 초기화 체크
         checkMonthlyReset();
         
         if (this.orderCount >= 15) {
             this.grade = CustomerGrade.VIP;
-            // VIP가 된 날짜 설정 (처음 설정되는 경우에만)
             if (this.vipStartDate == null) {
                 this.vipStartDate = LocalDate.now();
             }
@@ -71,7 +69,6 @@ public class Customer extends BaseEntity {
     }
 
     private void checkMonthlyReset() {
-        // VIP 시작일이 있고 한달이 지났다면 초기화
         if (this.vipStartDate != null) {
             LocalDate oneMonthLater = this.vipStartDate.plusMonths(1);
             if (LocalDate.now().isAfter(oneMonthLater)) {

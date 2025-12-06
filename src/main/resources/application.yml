@@ -1,7 +1,60 @@
 spring:
   profiles:
-    active: dev
+    active: ${SPRING_PROFILES_ACTIVE:prod}
+  datasource:
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT:3306}/${DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: ${DDL_AUTO:update}
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+server:
+  port: ${SERVER_PORT:8080}
+
+# Actuator 설정
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# JWT 설정
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+# 비즈니스 설정
+business:
+  hours:
+    open-time: "15:30"
+    close-time: "22:00"
+    last-order-time: "21:30"
+    delivery-start-time: "16:00"
+    delivery-end-time: "22:00"
+    min-delivery-minutes: 30
+    delivery-time-unit: 10
+  menu:
+    special-dishes:
+      champagne-festival-dinner:
+        name: "샴페인 축제 디너"
+        price: 90000
+  customer:
+    vip-discount-rate: 10
+
+data-load:
+  mode: ${DATA_LOAD_MODE:prod}
+
 ---
+# 개발/테스트용 프로파일 (로컬 테스트 시에만 사용)
 spring:
   config:
     activate:
@@ -23,27 +76,5 @@ spring:
       enabled: true
       path: /h2-console
 
-# 비즈니스 설정
-business:
-  hours:
-    open-time: "15:30"
-    close-time: "22:00"
-    last-order-time: "21:30"
-    delivery-start-time: "16:00"
-    delivery-end-time: "22:00"
-    min-delivery-minutes: 30
-    delivery-time-unit: 10
-  menu:
-    special-dishes:
-      champagne-festival-dinner:
-        name: "샴페인 축제 디너"
-        price: 90000
-  customer:
-    vip-discount-rate: 10
 data-load:
   mode: dev
-
-# JWT 설정
-jwt:
-  secret: dinnervery-secret-key-for-jwt-token-generation-minimum-256-bits-long
-  expiration: 86400000 # 24시간 (밀리초)

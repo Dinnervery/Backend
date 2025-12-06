@@ -17,7 +17,6 @@ public class PaymentController {
 
     private final OrderService orderService;
 
-    // 관리자용 주문 관리(상세 API 응답)
     @PostMapping("/orders")
     public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody OrderCreateRequest request) {
         OrderResponse response = orderService.createOrder(request);

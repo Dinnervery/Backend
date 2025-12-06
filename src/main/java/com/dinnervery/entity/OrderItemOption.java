@@ -53,10 +53,6 @@ public class OrderItemOption extends BaseEntity {
         }
     }
     
-    /**
-     * 해당 옵션의 추가 비용 계산
-     * @return 추가 비용 (양수: 추가, 0: 기본)
-     */
     public int calculateExtraCost() {
         return menuOption.calculateExtraCost(quantity);
     }

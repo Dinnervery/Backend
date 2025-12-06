@@ -13,13 +13,12 @@ import com.dinnervery.entity.Staff;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "spring.profiles.active", havingValue = "dev", matchIfMissing = false)
+@SuppressWarnings("null")
 public class DataLoader implements CommandLineRunner {
 
     private final StyleRepository styleRepository;
@@ -31,17 +30,10 @@ public class DataLoader implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // 스타일 생성
         createStyles();
-        
-        // 메뉴 생성
         createMenus();
-        
-        // 메뉴 옵션 생성
         createStorages();
         createMenuOptions();
-        
-        // 스태프 계정 생성
         createStaff();
         
         System.out.println("초기 데이터 로딩이 완료되었습니다.");
@@ -118,7 +110,6 @@ public class DataLoader implements CommandLineRunner {
 
     private void createMenuOptions() {
         if (menuOptionRepository.count() == 0) {
-            // 발렌타인 디너 옵션 (스테이크, 와인)
             Menu valentineDinner = menuRepository.findByName("발렌타인 디너").orElseThrow();
             
             MenuOption valentineSteak = MenuOption.builder()
@@ -141,7 +132,6 @@ public class DataLoader implements CommandLineRunner {
             valentineWine.setStorageConsumption(1);
             menuOptionRepository.save(valentineWine);
 
-            // 잉글리시 디너 옵션 (에그 스크램블, 베이컨, 바게트빵, 스테이크)
             Menu englishDinner = menuRepository.findByName("잉글리시 디너").orElseThrow();
             
             MenuOption englishEggScramble = MenuOption.builder()
@@ -184,7 +174,6 @@ public class DataLoader implements CommandLineRunner {
             englishSteak.setStorageConsumption(1);
             menuOptionRepository.save(englishSteak);
 
-            // 프렌치 디너 옵션 (커피, 와인, 샐러드, 스테이크)
             Menu frenchDinner = menuRepository.findByName("프렌치 디너").orElseThrow();
             
             MenuOption frenchCoffee = MenuOption.builder()
@@ -227,7 +216,6 @@ public class DataLoader implements CommandLineRunner {
             frenchSteak.setStorageConsumption(1);
             menuOptionRepository.save(frenchSteak);
 
-            // 샴페인 축제 디너 옵션 (샴페인 2병, 바게트빵 4개, 커피포트, 와인, 스테이크)
             Menu champagneDinner = menuRepository.findByName("샴페인 축제 디너").orElseThrow();
             
             MenuOption champagneChampagne = MenuOption.builder()
@@ -284,7 +272,6 @@ public class DataLoader implements CommandLineRunner {
 
     private void createStaff() {
         if (staffRepository.count() == 0) {
-            // 요리사 계정 생성 (비밀번호 암호화)
             Staff cook = Staff.builder()
                     .loginId("cook")
                     .password(passwordEncoder.encode("cook123"))
@@ -294,7 +281,6 @@ public class DataLoader implements CommandLineRunner {
                     .build();
             staffRepository.save(cook);
 
-            // 배달원 계정 생성 (비밀번호 암호화)
             Staff deliveryPerson = Staff.builder()
                     .loginId("delivery")
                     .password(passwordEncoder.encode("delivery123"))

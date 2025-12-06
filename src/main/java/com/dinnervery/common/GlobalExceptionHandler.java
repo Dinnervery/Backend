@@ -38,7 +38,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
         log.error("DataIntegrityViolationException: {}", e.getMessage());
-        // 주로 유니크 제약 위반 등 스키마 제약 오류 → 409 매핑
         ErrorResponse error = new ErrorResponse("CONFLICT", "이미 존재하는 계정입니다.");
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
@@ -49,7 +48,6 @@ public class GlobalExceptionHandler {
         
         Map<String, String> error = new HashMap<>();
         
-        // 필드별 검증 오류 메시지 생성
         e.getBindingResult().getFieldErrors().forEach(fieldError -> {
             error.put(fieldError.getField(), fieldError.getDefaultMessage());
         });

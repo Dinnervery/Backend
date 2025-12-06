@@ -34,7 +34,7 @@ public class StorageService {
 	@Transactional(readOnly = true)
 	public void checkStock(MenuOption option, int quantity) {
 		Storage storage = option.getStorageItem();
-		if (storage == null) return; // 스토리지 미연결 옵션은 재고 체크 제외
+		if (storage == null) return;
 		int required = option.getStorageConsumption() * quantity;
 		if (storage.getQuantity() < required) {
 			throw new IllegalStateException(storage.getName() + " 재고가 부족합니다.");
@@ -44,14 +44,13 @@ public class StorageService {
 	@Transactional
 	public void deductStock(MenuOption option, int quantity) {
 		Storage storage = option.getStorageItem();
-		if (storage == null) return; // 스토리지 미연결 옵션은 차감 제외
+		if (storage == null) return;
 		int consumed = option.getStorageConsumption() * quantity;
 		storage.setQuantity(storage.getQuantity() - consumed);
 		storageRepository.save(storage);
 	}
 
 	public Map<String, Object> getAllStorage() {
-		// storageItem이 연결된 MenuOption만 조회
 		List<MenuOption> menuOptions = menuOptionRepository.findAll().stream()
 				.filter(option -> option.getStorageItem() != null)
 				.collect(Collectors.toList());
@@ -69,5 +68,3 @@ public class StorageService {
 		return resp;
 	}
 }
-
-

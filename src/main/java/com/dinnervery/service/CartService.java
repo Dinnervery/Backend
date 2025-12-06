@@ -41,35 +41,28 @@ public class CartService {
 
     @Transactional
     public Map<String, Object> addItemToCart(Long customerId, CartAddItemRequest request) {
-        // 고객 조회
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new IllegalArgumentException("고객을 찾을 수 없습니다: " + customerId));
 
-        // 메뉴 조회
         Menu menu = menuRepository.findById(request.getMenuId())
                 .orElseThrow(() -> new IllegalArgumentException("메뉴를 찾을 수 없습니다: " + request.getMenuId()));
 
-        // 스타일 조회
         Style style = styleRepository.findById(request.getStyleId())
                 .orElseThrow(() -> new IllegalArgumentException("스타일을 찾을 수 없습니다: " + request.getStyleId()));
 
-        // 장바구니 조회 또는 생성
         Optional<Cart> existingCart = cartRepository.findByCustomer_Id(customerId);
         Cart cart = existingCart.orElseGet(() -> {
             Cart newCart = Cart.builder().customer(customer).build();
             return cartRepository.save(newCart);
         });
 
-        // 장바구니 아이템 생성
         CartItem cartItem = CartItem.builder()
                 .menu(menu)
                 .style(style)
                 .quantity(request.getMenuQuantity())
                 .build();
 
-        // CartItem에 Cart 설정
         cartItem.setCart(cart);
-        // 옵션 생성 및 추가
         if (request.getOptions() != null) {
             for (CartAddItemRequest.OptionRequest optReq : request.getOptions()) {
                 MenuOption menuOption = menuOptionRepository.findById(optReq.getOptionId())
@@ -81,26 +74,21 @@ public class CartService {
                 cartItem.addCartItemOption(cartItemOption);
             }
         }
-        // CartItem을 먼저 저장하여 ID 할당
         CartItem savedCartItem = cartItemRepository.save(cartItem);
-        // Cart에 추가 (이미 저장된 CartItem이므로 cascade 저장은 발생하지 않음)
         cart.addCartItem(savedCartItem);
         cartRepository.save(cart);
 
-        // 메뉴 객체
         Map<String, Object> menuObj = new HashMap<>();
         menuObj.put("menuId", savedCartItem.getMenu().getId());
         menuObj.put("name", savedCartItem.getMenu().getName());
         menuObj.put("quantity", savedCartItem.getQuantity());
         menuObj.put("unitPrice", savedCartItem.getMenu().getPrice());
 
-        // 스타일 객체
         Map<String, Object> styleObj = new HashMap<>();
         styleObj.put("styleId", savedCartItem.getStyle().getId());
         styleObj.put("name", savedCartItem.getStyle().getName());
         styleObj.put("price", savedCartItem.getStyle().getExtraPrice());
 
-        // 옵션 배열
         List<Map<String, Object>> optionsList = savedCartItem.getCartItemOptions().stream()
                 .map(o -> {
                     Map<String, Object> optionMap = new HashMap<>();
@@ -142,7 +130,6 @@ public class CartService {
                     Map<String, Object> itemMap = new HashMap<>();
                     itemMap.put("cartItemId", item.getId());
                     
-                    // 디너 아이템 정보
                     Map<String, Object> dinnerItem = new HashMap<>();
                     dinnerItem.put("menuId", item.getMenu().getId());
                     dinnerItem.put("name", item.getMenu().getName());
@@ -150,14 +137,12 @@ public class CartService {
                     dinnerItem.put("unitPrice", item.getMenu().getPrice());
                     itemMap.put("dinnerItem", dinnerItem);
                     
-                    // 스타일 정보
                     Map<String, Object> style = new HashMap<>();
                     style.put("styleId", item.getStyle().getId());
                     style.put("name", item.getStyle().getName());
                     style.put("extraPrice", item.getStyle().getExtraPrice());
                     itemMap.put("style", style);
                     
-                    // 옵션 정보
                     List<Map<String, Object>> options = item.getCartItemOptions().stream()
                             .map(o -> {
                                 Map<String, Object> m = new HashMap<>();
@@ -200,7 +185,6 @@ public class CartService {
                 .findByCartItem_IdAndMenuOption_Id(cartItemId, optionId)
                 .orElseThrow(() -> new IllegalArgumentException("장바구니 옵션을 찾을 수 없습니다: " + optionId));
 
-        // 수량은 1 이상이어야 함 (비즈니스 로직)
         if (request.getQuantity() == null || request.getQuantity() < 1) {
             throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
         }
@@ -211,7 +195,6 @@ public class CartService {
         Map<String, Object> response = new HashMap<>();
         response.put("cartItemId", cartItemId);
         
-        // 옵션 객체
         Map<String, Object> optionData = new HashMap<>();
         optionData.put("optionId", optionId);
         optionData.put("name", option.getName());
@@ -221,7 +204,6 @@ public class CartService {
 
         response.put("itemTotal", cartItem.getItemTotalPrice());
         
-        // 총금액 재계산
         Optional<Cart> cart = cartRepository.findByCustomer_Id(customerId);
         int totalAmount = 0;
         if (cart.isPresent()) {

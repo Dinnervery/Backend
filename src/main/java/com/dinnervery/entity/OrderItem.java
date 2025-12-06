@@ -51,7 +51,6 @@ public class OrderItem extends BaseEntity {
         this.menu = menu;
         this.style = style;
         this.quantity = quantity;
-        // calculateItemPrice()는 addOrderItem에서 호출됨
     }
 
     public void setOrder(Order order) {
@@ -60,13 +59,11 @@ public class OrderItem extends BaseEntity {
 
     public void calculateItemPrice() {
         if (menu == null || style == null) {
-            return; // menu나 style이 null이면 계산하지 않음
+            return;
         }
         
-        // 기본 가격 + 스타일 추가 가격
         int basePrice = menu.getPrice() + style.getExtraPrice();
         
-        // 옵션 비용 추가
         int optionCost = orderItemOptions.stream()
             .mapToInt(OrderItemOption::calculateExtraCost)
             .sum();
@@ -74,7 +71,6 @@ public class OrderItem extends BaseEntity {
         this.price = basePrice + optionCost;
         this.itemTotalPrice = this.price * quantity;
         
-        // Order의 총금액 업데이트
         if (this.order != null) {
             this.order.calculateTotalPrice();
         }

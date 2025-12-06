@@ -24,7 +24,6 @@ public class MenuController {
     private final MenuOptionRepository menuOptionRepository;
     private final StyleRepository styleRepository;
 
-    // 메뉴 목록 조회
     @GetMapping("/menus")
     public ResponseEntity<Map<String, Object>> getAllMenus(@RequestParam(required = false) Long customerId) {
         List<Menu> menus = menuRepository.findAll();
@@ -46,8 +45,6 @@ public class MenuController {
         return ResponseEntity.ok(response);
     }
 
-
-    // 구성품 조회
     @GetMapping("/menus/{menuId}/options")
     public ResponseEntity<Map<String, Object>> getMenuOptions(@PathVariable Long menuId) {
         List<MenuOption> options = menuOptionRepository.findByMenu_Id(menuId);
@@ -69,7 +66,6 @@ public class MenuController {
         return ResponseEntity.ok(response);
     }
 
-    // 스타일 조회
     @GetMapping("/styles")
     public ResponseEntity<Map<String, Object>> getStyles() {
         List<Style> styles = styleRepository.findAll();

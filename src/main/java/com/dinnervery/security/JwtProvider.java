@@ -23,13 +23,6 @@ public class JwtProvider {
         this.tokenValidityInMilliseconds = tokenValidityInMilliseconds;
     }
 
-    /**
-     * JWT 토큰 생성
-     * @param customerId 고객 ID
-     * @param loginId 로그인 ID
-     * @param role 역할 (CUSTOMER, STAFF)
-     * @return JWT 토큰 문자열
-     */
     public String generateToken(Long customerId, String loginId, String role) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + tokenValidityInMilliseconds);
@@ -44,33 +37,21 @@ public class JwtProvider {
                 .compact();
     }
 
-    /**
-     * JWT 토큰에서 사용자 ID 추출
-     */
     public Long getUserIdFromToken(String token) {
         Claims claims = getClaimsFromToken(token);
         return Long.parseLong(claims.getSubject());
     }
 
-    /**
-     * JWT 토큰에서 로그인 ID 추출
-     */
     public String getLoginIdFromToken(String token) {
         Claims claims = getClaimsFromToken(token);
         return claims.get("loginId", String.class);
     }
 
-    /**
-     * JWT 토큰에서 역할 추출
-     */
     public String getRoleFromToken(String token) {
         Claims claims = getClaimsFromToken(token);
         return claims.get("role", String.class);
     }
 
-    /**
-     * JWT 토큰 검증
-     */
     public boolean validateToken(String token) {
         try {
             getClaimsFromToken(token);
@@ -80,9 +61,6 @@ public class JwtProvider {
         }
     }
 
-    /**
-     * JWT 토큰에서 Claims 추출
-     */
     private Claims getClaimsFromToken(String token) {
         return Jwts.parser()
                 .verifyWith(secretKey)

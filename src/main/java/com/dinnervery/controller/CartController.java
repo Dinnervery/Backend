@@ -28,7 +28,6 @@ public class CartController {
         return ResponseEntity.ok(response);
     }
 
-    // 구성량 수량 변경
     @PatchMapping("/cart/{customerId}/items/{cartItemId}/options/{optionId}")
     public ResponseEntity<Map<String, Object>> changeOptionQuantity(
             @PathVariable Long customerId, 

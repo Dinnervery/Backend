@@ -37,38 +37,48 @@ out/
 .vscode/
 .history/
 
-### Additional ###
-*.class
-*.jar
-*.log
-*.swp
-*.tmp
-.DS_Store
-Thumbs.db
-
 ### Environment Variables ###
 .env
 .env.local
+.env.*.local
 .env.production
 .env.staging
+.env.development
+
+### Application Configuration ###
+application-local.yml
+application-secret.yml
+application-dev.yml
+application-*.yml
+!application.yml
+
+### Logs ###
+*.log
+*.log.*
+logs/
+log/
 
 ### Docker ###
 docker-compose.override.yml
-.dockerignore
+.docker/
 
-### Logs ###
-logs/
-*.log
-*.log.*
+### Documentation with sensitive info ###
+DEPLOYMENT.md
 
-### Database ###
-*.db
-*.sqlite
-*.sqlite3
+### Test Reports ###
+test-results/
+coverage/
+jacoco.exec
+*.exec
 
-### IDE ###
-*.sublime-project
-*.sublime-workspace
+### Security ###
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+*.keystore
+*.truststore
 
 ### OS ###
 .DS_Store
@@ -78,30 +88,7 @@ logs/
 .Trashes
 ehthumbs.db
 Thumbs.db
-
-### Gradle ###
-.gradle/
-gradle-app.setting
-!gradle-wrapper.jar
-!gradle-wrapper.properties
-
-### Spring Boot ###
-target/
-!.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
-
-### Test Reports ###
-test-results/
-coverage/
-jacoco.exec
-
-### Security ###
-*.pem
-*.key
-*.crt
-*.p12
-*.jks
+Desktop.ini
 
 ### Temporary Files ###
 *.tmp
@@ -110,8 +97,8 @@ jacoco.exec
 *.swp
 *.swo
 *~
+*.cache
 
-### Application Specific ###
-application-local.yml
-application-dev.yml
-application-secret.yml
+### Gradle Wrapper ###
+!gradle-wrapper.jar
+!gradle-wrapper.properties

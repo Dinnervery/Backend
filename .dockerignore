@@ -1,0 +1,103 @@
+# Build artifacts
+build/
+.gradle/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+*.log.*
+
+# IDE
+.idea/
+.vscode/
+.history/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+.apt_generated
+.factorypath
+.springBeans
+.sts4-cache
+bin/
+out/
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Git
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# Docker
+docker-compose*.yml
+.dockerignore
+.docker/
+
+# Documentation
+README.md
+*.md
+HELP.md
+
+# Test files
+src/test/
+test-results/
+coverage/
+*.exec
+
+# Environment files (will be provided separately)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+.env.development
+
+# Application Configuration (local/secret files)
+application-local.yml
+application-secret.yml
+application-dev.yml
+application-*.yml
+!application.yml
+
+# Config (PMD, etc.)
+config/
+
+# Logs
+logs/
+log/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+*.cache
+
+# Security files
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+*.keystore
+*.truststore
+
+# Gradle wrapper (will be copied separately in Dockerfile)
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+

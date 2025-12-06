@@ -31,20 +31,16 @@ public class OrderService {
 
     @Transactional
     public OrderResponse createOrder(OrderCreateRequest request) {
-        // 고객 조회
         Customer customer = customerRepository.findById(request.getCustomerId())
                 .orElseThrow(() -> new IllegalArgumentException("고객을 찾을 수 없습니다: " + request.getCustomerId()));
 
-        // 장바구니 조회
         Cart cart = cartRepository.findByCustomer_Id(request.getCustomerId())
                 .orElseThrow(() -> new IllegalArgumentException("장바구니가 비어있습니다. 주문할 상품을 장바구니에 담아주세요."));
 
-        // 장바구니가 비어있는지 확인
         if (cart.getCartItems() == null || cart.getCartItems().isEmpty()) {
             throw new IllegalArgumentException("장바구니가 비어있습니다. 주문할 상품을 장바구니에 담아주세요.");
         }
 
-        // 주문 생성
         Order order = Order.builder()
                 .customer(customer)
                 .address(request.getAddress())
@@ -52,16 +48,13 @@ public class OrderService {
                 .deliveryTime(request.getDeliveryTime())
                 .build();
 
-        // 장바구니 아이템들을 주문 아이템으로 복사
         for (CartItem cartItem : cart.getCartItems()) {
-            // OrderItem 생성 (CartItem에서 복사)
             OrderItem orderItem = OrderItem.builder()
                     .menu(cartItem.getMenu())
                     .style(cartItem.getStyle())
                     .quantity(cartItem.getQuantity())
                     .build();
 
-            // CartItemOption들을 OrderItemOption으로 복사
             for (CartItemOption cartItemOption : cartItem.getCartItemOptions()) {
                 OrderItemOption orderItemOption = OrderItemOption.builder()
                         .menuOption(cartItemOption.getMenuOption())
@@ -73,10 +66,8 @@ public class OrderService {
             order.addOrderItem(orderItem);
         }
 
-        // 주문 저장
         Order savedOrder = orderRepository.save(order);
 
-        // 장바구니 비우기 (CartItem들이 cascade로 삭제됨)
         cartRepository.delete(cart);
         
         return OrderResponse.from(savedOrder);
@@ -100,17 +91,15 @@ public class OrderService {
         Order order = orderRepository.findByIdWithDetails(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다: " + orderId));
 
-        // 주문을 완료 상태로 변경
         if (order.getDeliveryStatus() == Order.Status.REQUESTED) {
             order.startCooking();
             order.completeCooking();
             order.startDelivering();
-            order.completeDelivery();
+            order.completeDelivering();
         }
         
         Order completedOrder = orderRepository.save(order);
         
-        // 고객 주문수 증가 및 등급 갱신 (트랜잭션 내에서 보장)
         Customer customer = completedOrder.getCustomer();
         customer.incrementOrderCount();
         customerRepository.save(customer);
@@ -127,7 +116,6 @@ public class OrderService {
                             (order.getOrderItems() != null && !order.getOrderItems().isEmpty())
                             ? order.getOrderItems().stream()
                             .map(orderItem -> {
-                                // null 체크 추가
                                 if (orderItem.getMenu() == null || orderItem.getStyle() == null) {
                                     throw new IllegalStateException("주문 항목에 메뉴 또는 스타일 정보가 없습니다. 주문 ID: " + order.getId());
                                 }
@@ -156,7 +144,6 @@ public class OrderService {
                             .collect(Collectors.toList())
                             : java.util.Collections.emptyList();
                     
-                    // deliveryTime null 체크 추가
                     String deliveryTimeStr = order.getDeliveryTime() != null 
                             ? order.getDeliveryTime().toString() 
                             : "";
@@ -219,13 +206,11 @@ public class OrderService {
     public Map<String, Object> getOrdersByCustomerIdForResponse(Long customerId) {
         List<Order> orders = orderRepository.findByCustomerIdWithDetails(customerId);
         
-        // 모든 상태의 주문을 표시
         List<Map<String, Object>> orderList = orders.stream()
                 .map(order -> {
                     Map<String, Object> orderMap = new HashMap<>();
                     orderMap.put("orderId", order.getId());
                     
-                    // 날짜 형식: "2025.09.11"
                     String orderDate = order.getCreatedAt().toLocalDate().toString()
                             .replace("-", ".");
                     orderMap.put("orderDate", orderDate);
@@ -234,19 +219,16 @@ public class OrderService {
                     orderMap.put("status", order.getDeliveryStatus().toString());
                     orderMap.put("deliveryTime", order.getDeliveryTime().toString());
                     
-                    // 주문 아이템 목록
                     List<Map<String, Object>> orderItemsList = order.getOrderItems().stream()
                             .map(orderItem -> {
                                 Map<String, Object> itemMap = new HashMap<>();
-                                itemMap.put("name", orderItem.getMenu().getName()); // 메뉴명
+                                itemMap.put("name", orderItem.getMenu().getName());
                                 itemMap.put("quantity", orderItem.getQuantity());
                                 
-                                // 서빙 스타일명 (예시에서 두 번째 name으로 표시)
                                 if (orderItem.getStyle() != null) {
                                     itemMap.put("styleName", orderItem.getStyle().getName());
                                 }
                                 
-                                // 옵션 목록
                                 List<Map<String, Object>> optionsList = 
                                     (orderItem.getOrderItemOptions() != null && !orderItem.getOrderItemOptions().isEmpty())
                                         ? orderItem.getOrderItemOptions().stream()
@@ -286,18 +268,14 @@ public class OrderService {
             throw new IllegalArgumentException("상태 값이 필요합니다.");
         }
         
-        // 상태별 다른 처리
         switch (newStatus) {
             case "COOKING":
                 order.startCooking();
                 break;
             case "COOKED":
-                // 요리 완료 시 재고 확인 및 차감
                 try {
-                    // 주문에 포함된 모든 옵션의 재고 확인 및 차감
                     if (order.getOrderItems() != null) {
                         for (OrderItem orderItem : order.getOrderItems()) {
-                            // 옵션이 없는 주문 항목도 있을 수 있으므로 체크
                             if (orderItem.getOrderItemOptions() != null && !orderItem.getOrderItemOptions().isEmpty()) {
                                 for (OrderItemOption orderItemOption : orderItem.getOrderItemOptions()) {
                                     MenuOption menuOption = orderItemOption.getMenuOption();
@@ -306,7 +284,6 @@ public class OrderService {
                                         if (quantity == null || quantity < 1) {
                                             throw new IllegalStateException("옵션 수량이 유효하지 않습니다. 주문 ID: " + id);
                                         }
-                                        // 재고 확인
                                         storageService.checkStock(menuOption, quantity);
                                     }
                                 }
@@ -314,7 +291,6 @@ public class OrderService {
                         }
                     }
                     
-                    // 재고 확인 성공 시 재고 차감
                     if (order.getOrderItems() != null) {
                         for (OrderItem orderItem : order.getOrderItems()) {
                             if (orderItem.getOrderItemOptions() != null && !orderItem.getOrderItemOptions().isEmpty()) {
@@ -325,7 +301,6 @@ public class OrderService {
                                         if (quantity == null || quantity < 1) {
                                             throw new IllegalStateException("옵션 수량이 유효하지 않습니다. 주문 ID: " + id);
                                         }
-                                        // 재고 차감
                                         storageService.deductStock(menuOption, quantity);
                                     }
                                 }
@@ -333,10 +308,8 @@ public class OrderService {
                         }
                     }
                     
-                    // 재고 차감 성공 시 주문 상태 변경
                     order.completeCooking();
                 } catch (IllegalStateException e) {
-                    // 재고 부족 시 예외 재발생 (상태 코드는 @ControllerAdvice에서 처리)
                     throw new IllegalStateException("재고가 부족하여 요리를 완료할 수 없습니다: " + e.getMessage());
                 }
                 break;
@@ -344,8 +317,7 @@ public class OrderService {
                 order.startDelivering();
                 break;
             case "DONE":
-                order.completeDelivery();
-                // 주문 완료 시 고객 주문 수 증가 및 등급 갱신
+                order.completeDelivering();
                 Customer customer = order.getCustomer();
                 if (customer == null) {
                     throw new IllegalStateException("주문에 고객 정보가 없습니다. 주문 ID: " + id);

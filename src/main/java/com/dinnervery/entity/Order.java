@@ -64,7 +64,7 @@ public class Order extends BaseEntity {
     public void addOrderItem(OrderItem orderItem) {
         this.orderItems.add(orderItem);
         orderItem.setOrder(this);
-        orderItem.calculateItemPrice(); // OrderItem의 가격 계산
+        orderItem.calculateItemPrice();
         calculateTotalPrice();
     }
 
@@ -80,7 +80,6 @@ public class Order extends BaseEntity {
                 .sum();
     }
 
-    // 배달 상태 변경 메서드들
     public void startCooking() {
         if (this.deliveryStatus != Status.REQUESTED) {
             throw new IllegalStateException("조리 시작은 REQUESTED 상태에서만 가능합니다. 현재 상태: " + this.deliveryStatus);
@@ -104,7 +103,7 @@ public class Order extends BaseEntity {
         this.deliveringAt = LocalDateTime.now();
     }
 
-    public void completeDelivery() {
+    public void completeDelivering() {
         if (this.deliveryStatus != Status.DELIVERING) {
             throw new IllegalStateException("배달 완료는 DELIVERING 상태에서만 가능합니다. 현재 상태: " + this.deliveryStatus);
         }
@@ -112,8 +111,6 @@ public class Order extends BaseEntity {
         this.doneAt = LocalDateTime.now();
     }
 
-
-    // 배송 희망 시간 반환
     public LocalTime getDeliveryTime() {
         return this.deliveryTime;
     }

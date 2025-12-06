@@ -17,14 +17,12 @@ public class OrderController {
 
     private final OrderService orderService;
 
-    // 조리 대기목록 조회 (요리직원용)
     @GetMapping("/orders/cooking")
     public ResponseEntity<OrderListResponse> getCookingOrders() {
         OrderListResponse response = orderService.getCookingOrders();
         return ResponseEntity.ok(response);
     }
     
-    // 배달 대기목록 조회 (배달직원용)
     @GetMapping("/orders/delivery")
     public ResponseEntity<DeliveryOrderListResponse> getDeliveryOrders() {
         DeliveryOrderListResponse response = orderService.getDeliveryOrders();
@@ -37,7 +35,6 @@ public class OrderController {
         return ResponseEntity.ok(response);
     }
 
-    // 통합된 주문 상태 변경 API
     @PatchMapping("/orders/{id}/status")
     public ResponseEntity<OrderUpdateResponse> updateOrderStatus(
             @PathVariable Long id,
@@ -45,7 +42,6 @@ public class OrderController {
         OrderUpdateResponse response = orderService.updateOrderStatus(id, request);
         return ResponseEntity.ok(response);
     }
-
 }
 
 
