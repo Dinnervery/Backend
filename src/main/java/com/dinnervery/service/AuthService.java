@@ -2,8 +2,7 @@ package com.dinnervery.service;
 
 import com.dinnervery.dto.auth.request.SignupRequest;
 import com.dinnervery.dto.auth.request.LoginRequest;
-import com.dinnervery.dto.auth.response.LoginResponse;
-import com.dinnervery.dto.auth.response.StaffAuthResponse;
+import com.dinnervery.dto.auth.response.UnifiedLoginResponse;
 import com.dinnervery.dto.customer.response.CustomerResponse;
 import com.dinnervery.entity.Customer;
 import com.dinnervery.entity.Staff;
@@ -51,26 +50,34 @@ public class AuthService {
         );
     }
 
-    public LoginResponse customerLogin(LoginRequest request) {
-        Customer customer = customerRepository.findByLoginId(request.getLoginId())
-                .orElseThrow(() -> new IllegalArgumentException("로그인에 실패했습니다"));
+    /**
+     * 통합 로그인 - 고객/직원 자동 구분
+     * 고객 테이블에서 먼저 찾고, 없으면 직원 테이블에서 찾음
+     */
+    public UnifiedLoginResponse unifiedLogin(LoginRequest request) {
+        // 고객 테이블에서 먼저 찾기
+        Customer customer = customerRepository.findByLoginId(request.getLoginId()).orElse(null);
+        
+        if (customer != null) {
+            // 고객인 경우
+            if (!passwordEncoder.matches(request.getPassword(), customer.getPassword())) {
+                throw new IllegalArgumentException("로그인에 실패했습니다");
+            }
 
-        if (!passwordEncoder.matches(request.getPassword(), customer.getPassword())) {
-            throw new IllegalArgumentException("로그인에 실패했습니다");
+            String token = jwtProvider.generateToken(customer.getId(), customer.getLoginId(), "CUSTOMER");
+
+            return new UnifiedLoginResponse(
+                    customer.getId(),
+                    customer.getLoginId(),
+                    customer.getName(),
+                    "CUSTOMER",
+                    token,
+                    customer.getGrade().toString(),
+                    null  // task는 null
+            );
         }
 
-        String token = jwtProvider.generateToken(customer.getId(), customer.getLoginId(), "CUSTOMER");
-
-        return new LoginResponse(
-                customer.getId(),
-                customer.getLoginId(),
-                customer.getName(),
-                customer.getGrade().toString(),
-                token
-        );
-    }
-
-    public StaffAuthResponse staffLogin(LoginRequest request) {
+        // 직원 테이블에서 찾기
         Staff staff = staffRepository.findByLoginId(request.getLoginId())
                 .orElseThrow(() -> new IllegalArgumentException("로그인에 실패했습니다"));
 
@@ -79,15 +86,16 @@ public class AuthService {
         }
 
         String role = staff.getTask() == Staff.StaffTask.COOK ? "COOK" : "DELIVERY";
-        
         String token = jwtProvider.generateToken(staff.getId(), staff.getLoginId(), role);
 
-        return new StaffAuthResponse(
+        return new UnifiedLoginResponse(
                 staff.getId(),
                 staff.getLoginId(),
                 staff.getName(),
-                staff.getTask().toString(),
-                token
+                role,
+                token,
+                null,  // grade는 null
+                staff.getTask().toString()
         );
     }
 }

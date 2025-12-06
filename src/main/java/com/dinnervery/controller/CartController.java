@@ -2,6 +2,7 @@ package com.dinnervery.controller;
 
 import com.dinnervery.dto.cart.request.CartAddItemRequest;
 import com.dinnervery.dto.cart.request.CartOptionQuantityChangeRequest;
+import com.dinnervery.security.SecurityUtils;
 import com.dinnervery.service.CartService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,12 +19,14 @@ public class CartController {
 
     @PostMapping("/cart/{customerId}/items")
     public ResponseEntity<Map<String, Object>> addItemToCart(@PathVariable Long customerId, @RequestBody CartAddItemRequest request) {
+        SecurityUtils.validateCustomerAccess(customerId);
         Map<String, Object> response = cartService.addItemToCart(customerId, request);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/cart/{customerId}")
     public ResponseEntity<Map<String, Object>> getCart(@PathVariable Long customerId) {
+        SecurityUtils.validateCustomerAccess(customerId);
         Map<String, Object> response = cartService.getCart(customerId);
         return ResponseEntity.ok(response);
     }
@@ -34,6 +37,7 @@ public class CartController {
             @PathVariable Long cartItemId, 
             @PathVariable Long optionId,
             @RequestBody CartOptionQuantityChangeRequest request) {
+        SecurityUtils.validateCustomerAccess(customerId);
         Map<String, Object> response = cartService.changeOptionQuantity(customerId, cartItemId, optionId, request);
         return ResponseEntity.ok(response);
     }
