@@ -1,0 +1,41 @@
+package com.dinnervery.service;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
+
+@Service
+@RequiredArgsConstructor
+public class AiServiceClient {
+
+    private final WebClient aiWebClient;
+
+    /**
+     * AI 서비스 호출 (음성 인식 주문 처리)
+     * @param request 요청 데이터 (예: 음성 텍스트 또는 주문 정보)
+     * @return AI 서비스 응답
+     */
+    public Mono<String> callAi(String request) {
+        return aiWebClient.post()
+                .uri("/order")  // AI 서비스의 엔드포인트
+                .bodyValue(request)
+                .retrieve()
+                .bodyToMono(String.class)
+                .onErrorResume(error -> {
+                    // 에러 처리
+                    return Mono.error(new RuntimeException("AI 서비스 호출 실패: " + error.getMessage()));
+                });
+    }
+
+    /**
+     * AI 서비스 Health Check
+     */
+    public Mono<String> healthCheck() {
+        return aiWebClient.get()
+                .uri("/health")
+                .retrieve()
+                .bodyToMono(String.class);
+    }
+}
+

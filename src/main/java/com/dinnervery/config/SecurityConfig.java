@@ -44,6 +44,7 @@ public class SecurityConfig {
                     "/api/auth/**",
                     "/api/menus/**",
                     "/api/styles",
+                    "/api/ai/**",
                     "/h2-console/**",
                     "/actuator/health",
                     "/actuator/info"

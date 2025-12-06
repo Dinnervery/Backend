@@ -16,6 +16,8 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - SERVER_PORT=8080
       - DATA_LOAD_MODE=prod
+      # AI 서비스 베이스 URL (스프링에서 쓰게)
+      - AI_BASE_URL=http://ai-service:8081
     env_file:
       - .env
     restart: unless-stopped
@@ -25,4 +27,34 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    networks:
+      - dinnervery-network
 
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: dinnervery-ai
+    # 외부 포트 공개 ❌ (내부 통신만 할 거면 주석/삭제해도 됨)
+    # ports:
+    #   - "8081:8081"
+    environment:
+      - PORT=8081
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      # 필요하면 추가 키들
+      # - OPENAI_API_KEY=${OPENAI_API_KEY}
+    env_file:
+      - .env  # AI도 공통 .env 쓰고 싶으면
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - dinnervery-network
+
+networks:
+  dinnervery-network:
+    driver: bridge
