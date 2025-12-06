@@ -18,20 +18,35 @@ public class CartItemOption extends BaseEntity {
 	@JoinColumn(name = "cart_item_id", nullable = false)
 	private CartItem cartItem;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "menu_option_id", nullable = false)
-	private MenuOption menuOption;
+	@Column(name = "option_id", nullable = false)
+	private Long optionId;
+
+	@Column(name = "option_name", nullable = false)
+	private String optionName;
+
+	@Column(name = "option_price", nullable = false)
+	private int optionPrice;
+
+	@Column(name = "default_qty", nullable = false)
+	private int defaultQty;
 
 	@Column(name = "quantity", nullable = false)
 	private Integer quantity;
 
+	@Column(name = "storage_consumption", nullable = false)
+	private int storageConsumption = 1;
+
 	@Builder
-	public CartItemOption(MenuOption menuOption, Integer quantity) {
+	public CartItemOption(Long optionId, String optionName, int optionPrice, int defaultQty, Integer quantity, Integer storageConsumption) {
 		if (quantity != null && quantity < 1) {
 			throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
 		}
-		this.menuOption = menuOption;
+		this.optionId = optionId;
+		this.optionName = optionName;
+		this.optionPrice = optionPrice;
+		this.defaultQty = defaultQty;
 		this.quantity = quantity;
+		this.storageConsumption = storageConsumption != null ? storageConsumption : 1;
 	}
 
 	public void setCartItem(CartItem cartItem) {
@@ -52,7 +67,12 @@ public class CartItemOption extends BaseEntity {
 	}
 
 	public int calculateExtraCost() {
-		return menuOption.calculateExtraCost(quantity);
+		int difference = quantity - defaultQty;
+		if (difference > 0) {
+			return difference * optionPrice;
+		} else {
+			return 0;
+		}
 	}
 }
 

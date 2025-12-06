@@ -18,13 +18,23 @@ public class CartItem extends BaseEntity {
     @JoinColumn(name = "cart_id", nullable = false)
     private Cart cart;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "menu_id", nullable = false)
-    private Menu menu;
+    @Column(name = "menu_id", nullable = false)
+    private Long menuId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "serving_style_id", nullable = false)
-    private Style style;
+    @Column(name = "menu_name", nullable = false)
+    private String menuName;
+
+    @Column(name = "menu_price", nullable = false)
+    private int menuPrice;
+
+    @Column(name = "style_id", nullable = false)
+    private Long styleId;
+
+    @Column(name = "style_name", nullable = false)
+    private String styleName;
+
+    @Column(name = "style_extra_price", nullable = false)
+    private int styleExtraPrice;
 
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
@@ -39,12 +49,16 @@ public class CartItem extends BaseEntity {
     private java.util.List<CartItemOption> cartItemOptions = new java.util.ArrayList<>();
 
     @Builder
-    public CartItem(Menu menu, Style style, Integer quantity) {
+    public CartItem(Long menuId, String menuName, int menuPrice, Long styleId, String styleName, int styleExtraPrice, Integer quantity) {
         if (quantity != null && quantity < 1) {
             throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
         }
-        this.menu = menu;
-        this.style = style;
+        this.menuId = menuId;
+        this.menuName = menuName;
+        this.menuPrice = menuPrice;
+        this.styleId = styleId;
+        this.styleName = styleName;
+        this.styleExtraPrice = styleExtraPrice;
         this.quantity = quantity;
         calculateItemPrice();
     }
@@ -53,8 +67,10 @@ public class CartItem extends BaseEntity {
         this.cart = cart;
     }
 
-    public void setStyle(Style style) {
-        this.style = style;
+    public void setStyle(Long styleId, String styleName, int styleExtraPrice) {
+        this.styleId = styleId;
+        this.styleName = styleName;
+        this.styleExtraPrice = styleExtraPrice;
         calculateItemPrice();
     }
 
@@ -67,7 +83,7 @@ public class CartItem extends BaseEntity {
     }
 
     void calculateItemPrice() {
-        int basePrice = menu.getPrice() + style.getExtraPrice();
+        int basePrice = menuPrice + styleExtraPrice;
         int optionsExtra = 0;
         for (CartItemOption option : cartItemOptions) {
             optionsExtra += option.calculateExtraCost();

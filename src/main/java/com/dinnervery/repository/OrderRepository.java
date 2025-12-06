@@ -14,17 +14,13 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     
     @Query("SELECT DISTINCT o FROM Order o " +
            "JOIN FETCH o.customer " +
-           "JOIN FETCH o.orderItems oi " +
-           "JOIN FETCH oi.menu " +
-           "JOIN FETCH oi.style " +
+           "JOIN FETCH o.orderItems " +
            "WHERE o.id = :orderId")
     Optional<Order> findByIdWithDetails(@Param("orderId") Long orderId);
     
     @Query("SELECT DISTINCT o FROM Order o " +
            "JOIN FETCH o.customer " +
-           "JOIN FETCH o.orderItems oi " +
-           "JOIN FETCH oi.menu " +
-           "JOIN FETCH oi.style " +
+           "JOIN FETCH o.orderItems " +
            "WHERE o.customer.id = :customerId ORDER BY o.createdAt DESC")
     List<Order> findByCustomerIdWithDetails(@Param("customerId") Long customerId);
     
@@ -32,9 +28,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     
     @Query("SELECT DISTINCT o FROM Order o " +
            "JOIN FETCH o.customer " +
-           "JOIN FETCH o.orderItems oi " +
-           "JOIN FETCH oi.menu " +
-           "JOIN FETCH oi.style " +
+           "JOIN FETCH o.orderItems " +
            "WHERE o.deliveryStatus IN :statuses")
     List<Order> findByDeliveryStatusInWithDetails(@Param("statuses") List<Order.Status> statuses);
 }

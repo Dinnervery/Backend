@@ -6,7 +6,6 @@ import com.dinnervery.dto.auth.response.UnifiedLoginResponse;
 import com.dinnervery.dto.customer.response.CustomerResponse;
 import com.dinnervery.security.SecurityUtils;
 import com.dinnervery.service.AuthService;
-import com.dinnervery.service.CustomerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
-    private final CustomerService customerService;
 
     @PostMapping("/customer/signup")
     public ResponseEntity<CustomerResponse> customerSignup(@RequestBody SignupRequest request) {
@@ -42,7 +40,7 @@ public class AuthController {
     @GetMapping("/customer/{customerId}")
     public ResponseEntity<CustomerResponse> getCustomerInfo(@PathVariable Long customerId) {
         SecurityUtils.validateCustomerAccess(customerId);
-        CustomerResponse response = customerService.getCustomerInfo(customerId);
+        CustomerResponse response = authService.getCustomerInfo(customerId);
         return ResponseEntity.ok(response);
     }
 

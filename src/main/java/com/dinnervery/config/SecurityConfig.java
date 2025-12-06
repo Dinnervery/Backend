@@ -42,8 +42,6 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/api/auth/**",
-                    "/api/menus/**",
-                    "/api/styles",
                     "/api/ai/**",
                     "/h2-console/**",
                     "/actuator/health",
@@ -54,7 +52,6 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/cart/**",
                     "/api/orders/**",
-                    "/api/payments/**",
                     "/api/storage",
                     "/api/auth/customer/**"
                 ).authenticated()

@@ -7,7 +7,7 @@ import com.dinnervery.entity.CartItemOption;
 import java.util.Optional;
 
 public interface CartItemOptionRepository extends JpaRepository<CartItemOption, Long> {
-	Optional<CartItemOption> findByCartItem_IdAndMenuOption_Id(Long cartItemId, Long menuOptionId);
+	Optional<CartItemOption> findByCartItem_IdAndOptionId(Long cartItemId, Long optionId);
 }
 
 

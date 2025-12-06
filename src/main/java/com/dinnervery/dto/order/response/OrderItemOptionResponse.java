@@ -22,11 +22,11 @@ public class OrderItemOptionResponse {
 
     public static OrderItemOptionResponse from(OrderItemOption orderItemOption) {
         return OrderItemOptionResponse.builder()
-                .optionId(orderItemOption.getMenuOption().getId())
-                .name(orderItemOption.getMenuOption().getName())
+                .optionId(orderItemOption.getOptionId())
+                .name(orderItemOption.getOptionName())
                 .quantity(orderItemOption.getQuantity())
-                .defaultQty(orderItemOption.getMenuOption().getDefaultQty())
-                .price(orderItemOption.getMenuOption().getPrice())
+                .defaultQty(orderItemOption.getDefaultQty())
+                .price(orderItemOption.getOptionPrice())
                 .extraPrice(orderItemOption.calculateExtraCost())
                 .build();
     }

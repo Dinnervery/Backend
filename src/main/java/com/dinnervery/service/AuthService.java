@@ -98,5 +98,19 @@ public class AuthService {
                 staff.getTask().toString()
         );
     }
+
+    public CustomerResponse getCustomerInfo(Long customerId) {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new IllegalArgumentException("고객을 찾을 수 없습니다: " + customerId));
+
+        return new CustomerResponse(
+                customer.getId(),
+                customer.getLoginId(),
+                customer.getName(),
+                customer.getPhoneNumber(),
+                customer.getGrade().toString(),
+                customer.getOrderCount()
+        );
+    }
 }
 

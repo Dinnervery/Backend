@@ -9,6 +9,7 @@ import com.dinnervery.entity.*;
 import com.dinnervery.repository.CartRepository;
 import com.dinnervery.repository.CustomerRepository;
 import com.dinnervery.repository.OrderRepository;
+import com.dinnervery.service.StorageService;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -50,15 +51,23 @@ public class OrderService {
 
         for (CartItem cartItem : cart.getCartItems()) {
             OrderItem orderItem = OrderItem.builder()
-                    .menu(cartItem.getMenu())
-                    .style(cartItem.getStyle())
+                    .menuId(cartItem.getMenuId())
+                    .menuName(cartItem.getMenuName())
+                    .menuPrice(cartItem.getMenuPrice())
+                    .styleId(cartItem.getStyleId())
+                    .styleName(cartItem.getStyleName())
+                    .styleExtraPrice(cartItem.getStyleExtraPrice())
                     .quantity(cartItem.getQuantity())
                     .build();
 
             for (CartItemOption cartItemOption : cartItem.getCartItemOptions()) {
                 OrderItemOption orderItemOption = OrderItemOption.builder()
-                        .menuOption(cartItemOption.getMenuOption())
+                        .optionId(cartItemOption.getOptionId())
+                        .optionName(cartItemOption.getOptionName())
+                        .optionPrice(cartItemOption.getOptionPrice())
+                        .defaultQty(cartItemOption.getDefaultQty())
                         .quantity(cartItemOption.getQuantity())
+                        .storageConsumption(cartItemOption.getStorageConsumption())
                         .build();
                 orderItem.addOrderItemOption(orderItemOption);
             }
@@ -116,28 +125,23 @@ public class OrderService {
                             (order.getOrderItems() != null && !order.getOrderItems().isEmpty())
                             ? order.getOrderItems().stream()
                             .map(orderItem -> {
-                                if (orderItem.getMenu() == null || orderItem.getStyle() == null) {
-                                    throw new IllegalStateException("주문 항목에 메뉴 또는 스타일 정보가 없습니다. 주문 ID: " + order.getId());
-                                }
-                                
                                 List<OrderListResponse.OrderSummary.OptionSummaryDto> options = 
                                     (orderItem.getOrderItemOptions() != null && !orderItem.getOrderItemOptions().isEmpty()) 
                                         ? orderItem.getOrderItemOptions().stream()
-                                            .filter(opt -> opt.getMenuOption() != null)
                                             .map(opt -> new OrderListResponse.OrderSummary.OptionSummaryDto(
-                                                    opt.getMenuOption().getId(),
-                                                    opt.getMenuOption().getName(),
+                                                    opt.getOptionId(),
+                                                    opt.getOptionName(),
                                                     opt.getQuantity()
                                             ))
                                             .collect(java.util.stream.Collectors.toList())
                                         : java.util.Collections.emptyList();
                                 
                                 return new OrderListResponse.OrderSummary.OrderedItem(
-                                        orderItem.getMenu().getId(),
-                                        orderItem.getMenu().getName(),
+                                        orderItem.getMenuId(),
+                                        orderItem.getMenuName(),
                                         orderItem.getQuantity(),
-                                        orderItem.getStyle().getId(),
-                                        orderItem.getStyle().getName(),
+                                        orderItem.getStyleId(),
+                                        orderItem.getStyleName(),
                                         options
                                 );
                             })
@@ -170,21 +174,20 @@ public class OrderService {
                                 List<DeliveryOrderListResponse.OrderSummary.OptionSummaryDto> options = 
                                     (orderItem.getOrderItemOptions() != null && !orderItem.getOrderItemOptions().isEmpty()) 
                                         ? orderItem.getOrderItemOptions().stream()
-                                            .filter(opt -> opt.getMenuOption() != null)
                                             .map(opt -> new DeliveryOrderListResponse.OrderSummary.OptionSummaryDto(
-                                                    opt.getMenuOption().getId(),
-                                                    opt.getMenuOption().getName(),
+                                                    opt.getOptionId(),
+                                                    opt.getOptionName(),
                                                     opt.getQuantity()
                                             ))
                                             .collect(java.util.stream.Collectors.toList())
                                         : java.util.Collections.emptyList();
                                 
                                 return new DeliveryOrderListResponse.OrderSummary.OrderItem(
-                                        orderItem.getMenu().getId(),
-                                        orderItem.getMenu().getName(),
+                                        orderItem.getMenuId(),
+                                        orderItem.getMenuName(),
                                         orderItem.getQuantity(),
-                                        orderItem.getStyle().getId(),
-                                        orderItem.getStyle().getName(),
+                                        orderItem.getStyleId(),
+                                        orderItem.getStyleName(),
                                         options
                                 );
                             })
@@ -222,20 +225,16 @@ public class OrderService {
                     List<Map<String, Object>> orderItemsList = order.getOrderItems().stream()
                             .map(orderItem -> {
                                 Map<String, Object> itemMap = new HashMap<>();
-                                itemMap.put("name", orderItem.getMenu().getName());
+                                itemMap.put("name", orderItem.getMenuName());
                                 itemMap.put("quantity", orderItem.getQuantity());
-                                
-                                if (orderItem.getStyle() != null) {
-                                    itemMap.put("styleName", orderItem.getStyle().getName());
-                                }
+                                itemMap.put("styleName", orderItem.getStyleName());
                                 
                                 List<Map<String, Object>> optionsList = 
                                     (orderItem.getOrderItemOptions() != null && !orderItem.getOrderItemOptions().isEmpty())
                                         ? orderItem.getOrderItemOptions().stream()
-                                            .filter(option -> option.getMenuOption() != null)
                                             .map(option -> {
                                                 Map<String, Object> optionMap = new HashMap<>();
-                                                optionMap.put("name", option.getMenuOption().getName());
+                                                optionMap.put("name", option.getOptionName());
                                                 optionMap.put("quantity", option.getQuantity());
                                                 return optionMap;
                                             })
@@ -278,14 +277,11 @@ public class OrderService {
                         for (OrderItem orderItem : order.getOrderItems()) {
                             if (orderItem.getOrderItemOptions() != null && !orderItem.getOrderItemOptions().isEmpty()) {
                                 for (OrderItemOption orderItemOption : orderItem.getOrderItemOptions()) {
-                                    MenuOption menuOption = orderItemOption.getMenuOption();
-                                    if (menuOption != null) {
-                                        Integer quantity = orderItemOption.getQuantity();
-                                        if (quantity == null || quantity < 1) {
-                                            throw new IllegalStateException("옵션 수량이 유효하지 않습니다. 주문 ID: " + id);
-                                        }
-                                        storageService.checkStock(menuOption, quantity);
+                                    Integer quantity = orderItemOption.getQuantity();
+                                    if (quantity == null || quantity < 1) {
+                                        throw new IllegalStateException("옵션 수량이 유효하지 않습니다. 주문 ID: " + id);
                                     }
+                                    storageService.checkStock(orderItemOption);
                                 }
                             }
                         }
@@ -295,14 +291,11 @@ public class OrderService {
                         for (OrderItem orderItem : order.getOrderItems()) {
                             if (orderItem.getOrderItemOptions() != null && !orderItem.getOrderItemOptions().isEmpty()) {
                                 for (OrderItemOption orderItemOption : orderItem.getOrderItemOptions()) {
-                                    MenuOption menuOption = orderItemOption.getMenuOption();
-                                    if (menuOption != null) {
-                                        Integer quantity = orderItemOption.getQuantity();
-                                        if (quantity == null || quantity < 1) {
-                                            throw new IllegalStateException("옵션 수량이 유효하지 않습니다. 주문 ID: " + id);
-                                        }
-                                        storageService.deductStock(menuOption, quantity);
+                                    Integer quantity = orderItemOption.getQuantity();
+                                    if (quantity == null || quantity < 1) {
+                                        throw new IllegalStateException("옵션 수량이 유효하지 않습니다. 주문 ID: " + id);
                                     }
+                                    storageService.deductStock(orderItemOption);
                                 }
                             }
                         }

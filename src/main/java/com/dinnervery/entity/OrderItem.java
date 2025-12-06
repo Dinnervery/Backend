@@ -22,13 +22,23 @@ public class OrderItem extends BaseEntity {
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "menu_id", nullable = false)
-    private Menu menu;
+    @Column(name = "menu_id", nullable = false)
+    private Long menuId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "serving_style_id", nullable = false)
-    private Style style;
+    @Column(name = "menu_name", nullable = false)
+    private String menuName;
+
+    @Column(name = "menu_price", nullable = false)
+    private int menuPrice;
+
+    @Column(name = "style_id", nullable = false)
+    private Long styleId;
+
+    @Column(name = "style_name", nullable = false)
+    private String styleName;
+
+    @Column(name = "style_extra_price", nullable = false)
+    private int styleExtraPrice;
 
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
@@ -44,12 +54,16 @@ public class OrderItem extends BaseEntity {
     private List<OrderItemOption> orderItemOptions = new ArrayList<>();
 
     @Builder
-    public OrderItem(Menu menu, Style style, Integer quantity) {
+    public OrderItem(Long menuId, String menuName, int menuPrice, Long styleId, String styleName, int styleExtraPrice, Integer quantity) {
         if (quantity != null && quantity < 1) {
             throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
         }
-        this.menu = menu;
-        this.style = style;
+        this.menuId = menuId;
+        this.menuName = menuName;
+        this.menuPrice = menuPrice;
+        this.styleId = styleId;
+        this.styleName = styleName;
+        this.styleExtraPrice = styleExtraPrice;
         this.quantity = quantity;
     }
 
@@ -58,11 +72,7 @@ public class OrderItem extends BaseEntity {
     }
 
     public void calculateItemPrice() {
-        if (menu == null || style == null) {
-            return;
-        }
-        
-        int basePrice = menu.getPrice() + style.getExtraPrice();
+        int basePrice = menuPrice + styleExtraPrice;
         
         int optionCost = orderItemOptions.stream()
             .mapToInt(OrderItemOption::calculateExtraCost)
