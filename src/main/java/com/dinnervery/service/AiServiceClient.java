@@ -5,6 +5,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 public class AiServiceClient {
@@ -17,9 +19,12 @@ public class AiServiceClient {
      * @return AI 서비스 응답
      */
     public Mono<String> callAi(String request) {
+        // AI 서비스의 /chat 엔드포인트 호출
+        // 요청 형식: {"text": "..."}
+        Map<String, String> requestBody = Map.of("text", request);
         return aiWebClient.post()
-                .uri("/order")  // AI 서비스의 엔드포인트
-                .bodyValue(request)
+                .uri("/chat")
+                .bodyValue(requestBody)
                 .retrieve()
                 .bodyToMono(String.class)
                 .onErrorResume(error -> {
