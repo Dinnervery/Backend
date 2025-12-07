@@ -1,9 +1,29 @@
 services:
+  # Nginx는 호스트 서버에 직접 설치하여 사용 중이므로 주석 처리
+  # Docker Compose 방식으로 전환하려면 주석 해제
+  # nginx:
+  #   build:
+  #     context: ./nginx
+  #     dockerfile: Dockerfile
+  #   container_name: dinnervery-nginx
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     # Let's Encrypt 인증서 마운트 (서버에서 certbot으로 생성한 인증서)
+  #     - /etc/letsencrypt:/etc/letsencrypt:ro
+  #   depends_on:
+  #     - backend
+  #   restart: unless-stopped
+  #   networks:
+  #     - dinnervery-network
+
   backend:
     image: ghcr.io/dinnervery/backend:release
     container_name: dinnervery-backend
-    ports:
-      - "8080:8080"
+    # 외부 포트 노출 제거 (Nginx를 통해서만 접근)
+    # ports:
+    #   - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - DB_HOST=${DB_HOST}
