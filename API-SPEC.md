@@ -809,16 +809,83 @@ http://localhost:8080/api
 - `text`: `String` (필수) - 음성 인식된 텍스트 또는 사용자 입력
 
 **Response:** `200 OK`
+
+**디너 선택 페이지 예시:**
 ```json
 {
   "success": true,
   "result": {
-    "reply": "발렌타인 디너 2개를 주문 목록에 추가했습니다.",
+    "reply": "발렌타인 디너 2개를 선택하셨습니다.",
     "state": "ordering",
     "orderSummary": {
       "menuId": 1,
       "menuName": "발렌타인 디너",
-      "quantity": 2
+      "quantity": 2,
+      "styleId": null,
+      "styleName": null,
+      "options": null
+    }
+  },
+  "error": null
+}
+```
+
+**옵션 선택 페이지 예시:**
+```json
+{
+  "success": true,
+  "result": {
+    "reply": "스테이크 2개, 와인 1개를 추가하셨습니다.",
+    "state": "ordering",
+    "orderSummary": {
+      "menuId": 1,
+      "menuName": "발렌타인 디너",
+      "quantity": 2,
+      "styleId": null,
+      "styleName": null,
+      "options": [
+        {
+          "optionId": 1,
+          "optionName": "스테이크",
+          "quantity": 2
+        },
+        {
+          "optionId": 2,
+          "optionName": "와인",
+          "quantity": 1
+        }
+      ]
+    }
+  },
+  "error": null
+}
+```
+
+**스타일 선택 페이지 예시:**
+```json
+{
+  "success": true,
+  "result": {
+    "reply": "GRAND 스타일을 선택하셨습니다.",
+    "state": "ordering",
+    "orderSummary": {
+      "menuId": 1,
+      "menuName": "발렌타인 디너",
+      "quantity": 2,
+      "styleId": 2,
+      "styleName": "GRAND",
+      "options": [
+        {
+          "optionId": 1,
+          "optionName": "스테이크",
+          "quantity": 2
+        },
+        {
+          "optionId": 2,
+          "optionName": "와인",
+          "quantity": 1
+        }
+      ]
     }
   },
   "error": null
@@ -838,17 +905,78 @@ http://localhost:8080/api
 - `success`: `Boolean` - 요청 성공 여부
 - `result`: `Object | null` - 성공 시 응답 데이터
   - `reply`: `String` - AI 응답 메시지
-  - `state`: `String` - 현재 상태 (예: "ordering", "confirming" 등)
-  - `orderSummary`: `Object | null` - 주문 요약 정보
+  - `state`: `String` - AI 서비스 처리 상태
+  - `orderSummary`: `Object | null` - 주문 요약 정보 (현재 페이지까지의 선택 정보)
     - `menuId`: `Long` - 메뉴 ID
     - `menuName`: `String` - 메뉴 이름
     - `quantity`: `Integer` - 수량
+    - `styleId`: `Long | null` - 스타일 ID (스타일 선택 페이지에서만 값 있음)
+    - `styleName`: `String | null` - 스타일 이름 (스타일 선택 페이지에서만 값 있음)
+    - `options`: `Array<OptionInfo> | null` - 옵션 목록 (옵션 선택 페이지 이후부터 값 있음)
+      - `optionId`: `Long` - 옵션 ID
+      - `optionName`: `String` - 옵션 이름
+      - `quantity`: `Integer` - 옵션 수량
 - `error`: `String | null` - 에러 발생 시 에러 메시지
+
+**페이지별 `orderSummary` 포함 정보:**
+
+| 페이지 | 포함 정보 | 예시 |
+|--------|----------|------|
+| **디너 선택 페이지** | 메뉴 정보만 | `menuId`, `menuName`, `quantity`만 포함. `styleId`, `styleName`, `options`는 `null` |
+| **옵션 선택 페이지** | 메뉴 + 옵션 정보 | `menuId`, `menuName`, `quantity`, `options` 포함. `styleId`, `styleName`은 `null` |
+| **스타일 선택 페이지** | 메뉴 + 옵션 + 스타일 정보 | 모든 필드 포함 (`menuId`, `menuName`, `quantity`, `styleId`, `styleName`, `options`) |
+
+**AI 서비스 상태 (`state`) 설명:**
+
+| 상태 | 설명 | `orderSummary` | 프론트엔드 처리 |
+|------|------|---------------|----------------|
+| `"RUNNING"` | AI가 주문을 처리 중인 상태. 주문 정보 파싱이 아직 완료되지 않음 | `null` | AI의 `reply` 메시지만 표시. 장바구니 추가는 하지 않음 |
+| `"ordering"` | 주문 정보 파싱이 완료된 상태. 현재 페이지까지의 선택 정보가 포함됨 | `Object` (현재 페이지까지의 선택 정보) | `orderSummary` 정보를 사용하여 다음 페이지로 진행하거나 장바구니에 추가 가능 |
+| `"confirming"` | 주문 확인 중인 상태 | `Object` 또는 `null` | 상황에 따라 처리 (확인 메시지 표시 등) |
+
+**프론트엔드 처리 가이드:**
+
+1. **응답 판단 조건:**
+   ```javascript
+   // ❌ 잘못된 방법: success만으로 판단
+   if (response.success) { ... }
+   
+   // ✅ 올바른 방법: state와 orderSummary 모두 확인
+   if (response.success && 
+       response.result?.state === "ordering" && 
+       response.result?.orderSummary !== null) {
+     // 장바구니 추가 가능
+   }
+   ```
+
+2. **페이지별 처리 방법:**
+   - **디너 선택 페이지**: `orderSummary`에 메뉴 정보만 있음. 다음 페이지(옵션 선택)로 진행하거나, 옵션/스타일을 건너뛰고 기본값으로 장바구니에 추가 가능
+   - **옵션 선택 페이지**: `orderSummary`에 메뉴 + 옵션 정보가 있음. 다음 페이지(스타일 선택)로 진행하거나, 스타일을 건너뛰고 기본값으로 장바구니에 추가 가능
+   - **스타일 선택 페이지**: `orderSummary`에 모든 정보가 포함됨. 장바구니에 추가 가능
+
+3. **장바구니 추가 시 주의사항:**
+   - `orderSummary`에는 현재 페이지까지의 선택 정보만 포함됩니다.
+   - 장바구니 API(`POST /api/cart/{customerId}/items`)에는 추가 정보가 필요합니다:
+     - `menuPrice`: 프론트엔드에서 메뉴 정보 조회 필요
+     - `styleExtraPrice`: 프론트엔드에서 스타일 정보 조회 필요 (스타일 선택 페이지에서는 `styleId`로 조회 가능)
+     - `options`의 `optionPrice`, `defaultQty`: 프론트엔드에서 옵션 정보 조회 필요
+   - 따라서 `orderSummary`만으로는 장바구니 추가가 불가능하며, 프론트엔드에서 메뉴/옵션/스타일 정보를 조회하여 나머지 필드를 채워야 합니다.
+
+4. **로컬 스토리지 사용:**
+   - `state === "RUNNING"`이고 `orderSummary === null`인 경우: 로컬 스토리지에 저장하지 않음 (처리 중 상태)
+   - `state === "ordering"`이고 `orderSummary !== null`인 경우: 현재 페이지까지의 선택 정보를 로컬 스토리지에 저장하여 다음 페이지로 전달
+   - 각 페이지에서 `orderSummary`를 업데이트하여 최신 선택 정보 유지
+   - 실제 장바구니 API 호출은 모든 필수 정보가 준비되었을 때만 수행 (스타일 선택 페이지에서 권장)
 
 **참고:**
 - 이 API는 내부적으로 AI 서비스(`http://ai-service:8000/chat`)를 호출합니다.
-- AI 서비스가 주문 정보를 파싱하여 `orderSummary`를 반환합니다.
-- `orderSummary`가 `null`이 아닌 경우, 프론트엔드에서 해당 정보를 사용하여 장바구니에 추가할 수 있습니다.
+- AI 서비스가 현재 페이지에서 파싱한 정보를 `orderSummary`에 포함하여 반환합니다.
+- 각 페이지마다 호출되며, 해당 페이지까지의 선택 정보만 포함됩니다.
+  - 디너 선택 페이지: 메뉴 정보만
+  - 옵션 선택 페이지: 메뉴 + 옵션 정보
+  - 스타일 선택 페이지: 메뉴 + 옵션 + 스타일 정보
+- `state`가 `"RUNNING"`이고 `orderSummary`가 `null`인 경우, 프론트엔드에서는 AI의 `reply` 메시지만 표시합니다.
+- `state`가 `"ordering"`이고 `orderSummary`가 `null`이 아닌 경우, 프론트엔드에서 해당 정보를 사용하여 다음 페이지로 진행하거나 장바구니에 추가할 수 있습니다.
 
 ---
 
