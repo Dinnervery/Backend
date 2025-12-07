@@ -790,7 +790,69 @@ http://localhost:8080/api
 
 ---
 
-## 5. 재고 관리 로직
+## 5. AI 음성인식 API
+
+### 5.1 음성인식 주문 처리
+**POST** `/api/ai/order`
+
+**Headers:**
+- `Authorization: Bearer {token}`
+
+**Request Body:**
+```json
+{
+  "text": "발렌타인 디너 2개 주문해줘"
+}
+```
+
+**필드 타입:**
+- `text`: `String` (필수) - 음성 인식된 텍스트 또는 사용자 입력
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "result": {
+    "reply": "발렌타인 디너 2개를 주문 목록에 추가했습니다.",
+    "state": "ordering",
+    "orderSummary": {
+      "menuId": 1,
+      "menuName": "발렌타인 디너",
+      "quantity": 2
+    }
+  },
+  "error": null
+}
+```
+
+**에러 발생 시:** `400 Bad Request`
+```json
+{
+  "success": false,
+  "result": null,
+  "error": "AI 서비스 호출 실패: ..."
+}
+```
+
+**필드 타입:**
+- `success`: `Boolean` - 요청 성공 여부
+- `result`: `Object | null` - 성공 시 응답 데이터
+  - `reply`: `String` - AI 응답 메시지
+  - `state`: `String` - 현재 상태 (예: "ordering", "confirming" 등)
+  - `orderSummary`: `Object | null` - 주문 요약 정보
+    - `menuId`: `Long` - 메뉴 ID
+    - `menuName`: `String` - 메뉴 이름
+    - `quantity`: `Integer` - 수량
+- `error`: `String | null` - 에러 발생 시 에러 메시지
+
+**참고:**
+- 이 API는 내부적으로 AI 서비스(`http://ai-service:8000/chat`)를 호출합니다.
+- AI 서비스가 주문 정보를 파싱하여 `orderSummary`를 반환합니다.
+- `orderSummary`가 `null`이 아닌 경우, 프론트엔드에서 해당 정보를 사용하여 장바구니에 추가할 수 있습니다.
+
+---
+
+## 6. 재고 관리 로직
 
 ### 재고 차감 규칙
 주문 상태가 `COOKED`로 변경될 때 자동으로 재고가 차감됩니다:
@@ -812,7 +874,7 @@ http://localhost:8080/api
 
 ---
 
-## 6. 제거된 API
+## 7. 제거된 API
 
 다음 API들은 더 이상 제공되지 않습니다 (프론트에서 직접 관리):
 
@@ -824,7 +886,7 @@ http://localhost:8080/api
 
 ---
 
-## 7. 에러 응답
+## 8. 에러 응답
 
 ### 공통 에러 형식
 ```json
@@ -853,7 +915,7 @@ http://localhost:8080/api
 
 ---
 
-## 8. 중요 사항
+## 9. 중요 사항
 
 ### 프론트엔드에서 관리해야 하는 정보
 1. **메뉴 정보**

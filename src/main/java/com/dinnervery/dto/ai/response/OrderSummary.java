@@ -7,9 +7,9 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class AiChatResponse {
-    private String reply;
-    private String state;
-    private OrderSummary orderSummary;
+public class OrderSummary {
+    private Long menuId;
+    private String menuName;
+    private Integer quantity;
 }
 
