@@ -372,116 +372,48 @@ http://localhost:8080/api
   - `quantity`: `Integer`
   - `unitPrice`: `Integer`
 
-### 2.4 장바구니 아이템 수정
-**PUT** `/api/cart/{customerId}/items/{cartItemId}`
+### 2.4 장바구니 아이템 삭제
+**DELETE** `/api/cart/{customerId}/items`
 
 **Path Parameters:**
 - `customerId`: `Long`
-- `cartItemId`: `Long`
+
+**Query Parameters:**
+- `cartItemId`: `Long` (선택) - 삭제할 장바구니 아이템 ID
+  - 제공하지 않거나 `0`인 경우: 전체 장바구니 삭제
+  - 특정 값인 경우: 해당 아이템만 삭제
 
 **Headers:**
 - `Authorization: Bearer {token}`
-- `Content-Type: application/json` (필수)
 
-**Request Body:**
-```json
-{
-  "menuId": 1,
-  "menuName": "발렌타인 디너",
-  "menuPrice": 28000,
-  "menuQuantity": 2,
-  "styleId": 1,
-  "styleName": "SIMPLE",
-  "styleExtraPrice": 0,
-  "options": [
-    {
-      "optionId": 1,
-      "optionName": "스테이크",
-      "optionPrice": 15000,
-      "defaultQty": 1,
-      "quantity": 2
-    },
-    {
-      "optionId": 2,
-      "optionName": "와인",
-      "optionPrice": 8000,
-      "defaultQty": 1,
-      "quantity": 1
-    }
-  ]
-}
-```
-
-**필드 타입:**
-- `menuId`: `Long` (필수) - 메뉴 ID (프론트에서 관리)
-- `menuName`: `String` (필수) - 메뉴 이름
-- `menuPrice`: `Integer` (필수, 0 이상) - 메뉴 기본 가격
-- `menuQuantity`: `Integer` (필수, 1 이상) - 메뉴 수량
-- `styleId`: `Long` (필수) - 서빙 스타일 ID (프론트에서 관리)
-- `styleName`: `String` (필수) - 서빙 스타일 이름 (예: "SIMPLE", "GRAND", "DELUXE")
-- `styleExtraPrice`: `Integer` (필수, 0 이상) - 서빙 스타일 추가 가격
-- `options`: `Array<OptionRequest>` (선택) - 옵션 배열
-  - `optionId`: `Long` (필수) - 옵션 ID (프론트에서 관리)
-  - `optionName`: `String` (필수) - 옵션 이름 (재고 매칭에 사용됨, Storage의 name과 일치해야 함)
-  - `optionPrice`: `Integer` (필수, 0 이상) - 옵션 단가
-  - `defaultQty`: `Integer` (필수, 1 이상) - 기본 수량
-  - `quantity`: `Integer` (필수, 1 이상) - 주문 수량
+**사용 예시:**
+- 특정 아이템 삭제: `DELETE /api/cart/1/items?cartItemId=5`
+- 전체 장바구니 삭제: `DELETE /api/cart/1/items` 또는 `DELETE /api/cart/1/items?cartItemId=0`
 
 **참고:** 
-- 이 API는 지정된 `cartItemId`의 장바구니 아이템을 전체 교체합니다.
-- 기존 옵션들은 모두 삭제되고 새로운 옵션들로 교체됩니다.
-- 재고 소비량(`storageConsumption`)은 백엔드에서 자동으로 처리됩니다. 프론트엔드는 전달할 필요가 없습니다.
+- `cartItemId`가 제공되지 않거나 `0`이면 해당 고객의 장바구니에 있는 모든 아이템을 삭제합니다 (로그아웃 시 사용).
+- 특정 `cartItemId`가 제공되면 해당 아이템과 관련된 모든 옵션도 함께 삭제됩니다.
 
-**Response:** `200 OK`
+**Response (특정 아이템 삭제 시):** `200 OK`
 ```json
 {
-  "cartItemId": 1,
-  "menu": {
-    "menuId": 1,
-    "name": "발렌타인 디너",
-    "quantity": 2,
-    "unitPrice": 28000
-  },
-  "style": {
-    "styleId": 1,
-    "name": "SIMPLE",
-    "price": 0
-  },
-  "options": [
-    {
-      "optionId": 1,
-      "name": "스테이크",
-      "quantity": 2,
-      "unitPrice": 15000
-    },
-    {
-      "optionId": 2,
-      "name": "와인",
-      "quantity": 1,
-      "unitPrice": 8000
-    }
-  ],
-  "totalAmount": 106000
+  "message": "장바구니 아이템이 삭제되었습니다.",
+  "remainingItemsCount": 2
+}
+```
+
+**Response (전체 장바구니 삭제 시):** `200 OK`
+```json
+{
+  "message": "장바구니가 모두 삭제되었습니다.",
+  "cartItems": []
 }
 ```
 
 **필드 타입:**
-- `cartItemId`: `Long`
-- `menu`: `Object`
-  - `menuId`: `Long`
-  - `name`: `String`
-  - `quantity`: `Integer`
-  - `unitPrice`: `Integer`
-- `style`: `Object`
-  - `styleId`: `Long`
-  - `name`: `String`
-  - `price`: `Integer`
-- `options`: `Array<Object>`
-  - `optionId`: `Long`
-  - `name`: `String`
-  - `quantity`: `Integer`
-  - `unitPrice`: `Integer`
-- `totalAmount`: `Integer`
+- `message`: `String` - 삭제 완료 메시지
+- `remainingItemsCount`: `Integer` (특정 아이템 삭제 시) - 삭제 후 남은 아이템 개수
+- `cartItems`: `Array` (전체 삭제 시) - 항상 빈 배열
 
 ---
 

@@ -10,8 +10,8 @@ import com.dinnervery.repository.CartItemRepository;
 import com.dinnervery.repository.CartRepository;
 import com.dinnervery.repository.CustomerRepository;
 import com.dinnervery.repository.CartItemOptionRepository;
-import com.dinnervery.service.StorageService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,11 +33,12 @@ public class CartService {
     private final StorageService storageService;
 
     @Transactional
-    public Map<String, Object> addItemToCart(Long customerId, CartAddItemRequest request) {
+    public Map<String, Object> addItemToCart(@NonNull Long customerId, CartAddItemRequest request) {
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new IllegalArgumentException("고객을 찾을 수 없습니다: " + customerId));
 
         Optional<Cart> existingCart = cartRepository.findByCustomer_Id(customerId);
+        @SuppressWarnings("null")
         Cart cart = existingCart.orElseGet(() -> {
             Cart newCart = Cart.builder().customer(customer).build();
             return cartRepository.save(newCart);
@@ -106,7 +107,7 @@ public class CartService {
         return response;
     }
 
-    public Map<String, Object> getCart(Long customerId) {
+    public Map<String, Object> getCart(@NonNull Long customerId) {
         Optional<Cart> cart = cartRepository.findByCustomer_Id(customerId);
         
         Map<String, Object> response = new HashMap<>();
@@ -165,7 +166,7 @@ public class CartService {
     }
 
     @Transactional
-    public Map<String, Object> updateCartItem(Long customerId, Long cartItemId, CartAddItemRequest request) {
+    public Map<String, Object> updateCartItem(@NonNull Long customerId, @NonNull Long cartItemId, CartAddItemRequest request) {
         // 고객 검증
         customerRepository.findById(customerId)
                 .orElseThrow(() -> new IllegalArgumentException("고객을 찾을 수 없습니다: " + customerId));
@@ -245,10 +246,11 @@ public class CartService {
     }
 
     @Transactional
+    @SuppressWarnings("null")
     public Map<String, Object> changeOptionQuantity(
-            Long customerId, 
-            Long cartItemId, 
-            Long optionId,
+            @NonNull Long customerId, 
+            @NonNull Long cartItemId, 
+            @NonNull Long optionId,
             CartOptionQuantityChangeRequest request) {
         
         CartItem cartItem = cartItemRepository.findById(cartItemId)
@@ -284,6 +286,58 @@ public class CartService {
             totalAmount = items.stream().mapToInt(CartItem::getItemTotalPrice).sum();
         }
         response.put("totalAmount", totalAmount);
+
+        return response;
+    }
+
+    @Transactional
+    @SuppressWarnings("null")
+    public Map<String, Object> deleteCartItem(@NonNull Long customerId, Long cartItemId) {
+        // 고객 검증
+        customerRepository.findById(customerId)
+                .orElseThrow(() -> new IllegalArgumentException("고객을 찾을 수 없습니다: " + customerId));
+
+        // cartItemId가 0이거나 null이면 전체 장바구니 삭제
+        if (cartItemId == null || cartItemId == 0) {
+            Optional<Cart> cart = cartRepository.findByCustomer_Id(customerId);
+            if (cart.isPresent()) {
+                cartRepository.delete(cart.get());
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "장바구니가 모두 삭제되었습니다.");
+            response.put("cartItems", List.of());
+            return response;
+        }
+
+        // 특정 아이템만 삭제
+        CartItem cartItem = cartItemRepository.findById(cartItemId)
+                .orElseThrow(() -> new IllegalArgumentException("장바구니 아이템을 찾을 수 없습니다: " + cartItemId));
+        
+        // 해당 cartItem이 해당 customer의 cart에 속하는지 확인
+        Cart cart = cartItem.getCart();
+        if (cart == null || !cart.getCustomer().getId().equals(customerId)) {
+            throw new IllegalArgumentException("해당 장바구니 아이템에 대한 권한이 없습니다.");
+        }
+
+        // 아이템 삭제
+        cart.removeCartItem(cartItem);
+        cartItemRepository.delete(cartItem);
+        cartRepository.save(cart);
+
+        // 남은 장바구니 조회
+        Optional<Cart> updatedCart = cartRepository.findByCustomer_Id(customerId);
+        Map<String, Object> response = new HashMap<>();
+        
+        if (updatedCart.isEmpty() || updatedCart.get().getCartItems().isEmpty()) {
+            response.put("message", "장바구니 아이템이 삭제되었습니다.");
+            response.put("cartItems", List.of());
+        } else {
+            List<CartItem> remainingItems = cartItemRepository.findByCart_Id(updatedCart.get().getId());
+            
+            response.put("message", "장바구니 아이템이 삭제되었습니다.");
+            response.put("remainingItemsCount", remainingItems.size());
+        }
 
         return response;
     }

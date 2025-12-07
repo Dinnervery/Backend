@@ -24,13 +24,13 @@ public class CartController {
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/cart/{customerId}/items/{cartItemId}")
-    public ResponseEntity<Map<String, Object>> updateCartItem(
+    @DeleteMapping("/cart/{customerId}/items")
+    public ResponseEntity<Map<String, Object>> deleteCartItem(
             @PathVariable Long customerId,
-            @PathVariable Long cartItemId,
-            @RequestBody CartAddItemRequest request) {
+            @RequestParam(required = false) Long cartItemId) {
         SecurityUtils.validateCustomerAccess(customerId);
-        Map<String, Object> response = cartService.updateCartItem(customerId, cartItemId, request);
+        Long itemId = (cartItemId != null && cartItemId != 0) ? cartItemId : 0L;
+        Map<String, Object> response = cartService.deleteCartItem(customerId, itemId);
         return ResponseEntity.ok(response);
     }
 
